@@ -123,6 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
     const lerp = (from, to, alpha) => from + (to - from) * alpha;
+    const isTouchViewport = () => window.matchMedia('(max-width: 900px), (hover: none) and (pointer: coarse)').matches;
+
+    if (window.matchMedia('(hover: none), (pointer: coarse)').matches) {
+        document.body.classList.add('touch-device');
+    }
 
     // --- Form Handling & Visual Result Displays ---
     const handleForm = async (formId, endpoint, resultContainerId, processFunc) => {
@@ -332,7 +337,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastWarningText = '';
     let lastWarningAt = 0;
     let uiAnimationId = null;
-    const BACKEND_INTERVAL_MS = 140;
+    const DESKTOP_BACKEND_INTERVAL_MS = 140;
+    const MOBILE_BACKEND_INTERVAL_MS = 220;
     const uiRenderState = {
         score: 100,
         targetScore: 100,
@@ -422,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const values = scoreHistory.slice(-32);
+        const values = scoreHistory.slice(-(isTouchViewport() ? 24 : 32));
         const min = Math.min(...values);
         const max = Math.max(...values);
         const range = Math.max(1, max - min);
@@ -569,7 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const landmarks = poses[0].keypoints;
             drawSkeleton(landmarks);
 
-            const shouldProcess = !fitnessPaused && !backendInFlight && ((now - lastBackendTick) >= BACKEND_INTERVAL_MS);
+            const backendInterval = isTouchViewport() ? MOBILE_BACKEND_INTERVAL_MS : DESKTOP_BACKEND_INTERVAL_MS;
+            const shouldProcess = !fitnessPaused && !backendInFlight && ((now - lastBackendTick) >= backendInterval);
             if (shouldProcess) {
                 backendInFlight = true;
                 lastBackendTick = now;
@@ -610,10 +617,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const initFitness = async () => {
         if (detector) return;
+        const useLiteModel = isTouchViewport();
         detector = await poseDetection.createDetector(poseDetection.SupportedModels.BlazePose, {
             runtime: 'mediapipe',
             solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
-            modelType: 'full'
+            modelType: useLiteModel ? 'lite' : 'full'
         });
     };
 
@@ -669,7 +677,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (!videoElement.srcObject) {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+                const mobileCamera = isTouchViewport();
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: mobileCamera
+                        ? {
+                            facingMode: 'user',
+                            width: { ideal: 720, max: 960 },
+                            height: { ideal: 540, max: 720 },
+                            frameRate: { ideal: 24, max: 30 }
+                        }
+                        : {
+                            facingMode: 'user',
+                            width: { ideal: 1280, max: 1920 },
+                            height: { ideal: 720, max: 1080 },
+                            frameRate: { ideal: 30, max: 30 }
+                        }
+                });
                 videoElement.srcObject = stream;
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
@@ -702,6 +725,10 @@ document.addEventListener('DOMContentLoaded', () => {
             videoElement.srcObject = null;
         }
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        if (uiAnimationId) {
+            cancelAnimationFrame(uiAnimationId);
+            uiAnimationId = null;
+        }
         fetch('/reset_fitness', { method: 'POST' });
         setPipe(ui.pipeCam, false);
         setPipe(ui.pipeTrack, false);

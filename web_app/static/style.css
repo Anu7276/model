@@ -1203,47 +1203,24 @@ body.light-mode .top-nav {
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
-    .sidebar {
-        width: 60px;
-    }
+.touch-device .glass-panel:hover,
+.touch-device .dash-card:hover,
+.touch-device .coach2-ex-btn:hover,
+.touch-device .coach2-controls button:hover,
+.touch-device .coach2-cmd:hover,
+.touch-device .coach2-stat:hover,
+.touch-device .nav-links li:not(.nav-header):hover {
+    transform: none;
+    box-shadow: var(--panel-shadow);
+}
 
-    .sidebar:hover {
-        width: 60px;
-    }
+.touch-device .dash-card:hover::before {
+    opacity: 0.45;
+}
 
-    .nav-text,
-    .logo-text,
-    .nav-header {
-        display: none;
-    }
-
-    .main-content {
-        margin-left: 60px;
-        width: calc(100% - 60px);
-    }
-
-    .two-column-layout,
-    .dashboard-cards,
-    .analytics-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .coach2-shell {
-        grid-template-columns: 1fr;
-    }
-
-    .coach2-side {
-        order: 2;
-    }
-
-    .coach2-main {
-        order: 1;
-    }
-
-    .coach2-exercises {
-        grid-template-columns: 1fr;
-    }
+.touch-device .coach2-grid-bg {
+    opacity: 0.14;
+    animation-duration: 22s;
 }
 
 @keyframes gridDrift {
@@ -1269,35 +1246,6 @@ body.light-mode .top-nav {
     }
 }
 
-@media (max-width: 700px) {
-    .coach2-root {
-        min-height: auto;
-    }
-
-    .coach2-shell {
-        padding: 10px;
-        gap: 10px;
-    }
-
-    .coach2-live {
-        min-height: 260px;
-    }
-
-    .coach2-stats {
-        grid-template-columns: 1fr;
-    }
-
-    .coach2-controls {
-        flex-direction: column;
-    }
-
-    .coach2-overlay {
-        top: 8px;
-        left: 8px;
-        right: 8px;
-    }
-}
-
 @media (max-width: 1280px) {
     .main-content {
         padding: 32px;
@@ -1312,31 +1260,68 @@ body.light-mode .top-nav {
     }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1100px) {
+    .two-column-layout,
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coach2-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .coach2-side {
+        order: 2;
+    }
+
+    .coach2-main {
+        order: 1;
+    }
+}
+
+@media (max-width: 900px) {
     .top-nav {
         height: auto;
-        min-height: var(--nav-height);
-        padding: 10px 16px;
-        flex-wrap: wrap;
+        min-height: 86px;
+        padding: 10px 12px;
+        flex-direction: column;
+        align-items: stretch;
         gap: 10px;
+        justify-content: flex-start;
+    }
+
+    .logo {
+        width: 100%;
         justify-content: center;
     }
 
     .nav-links {
         width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
         gap: 8px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 0 2px 6px;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
     }
 
     .nav-links li:not(.nav-header) {
+        flex: 0 0 auto;
         padding: 10px 12px;
         font-size: 0.85rem;
+        min-height: 40px;
+        scroll-snap-align: start;
+    }
+
+    .nav-links li i {
+        margin-right: 6px;
     }
 
     .main-content {
-        margin-top: 98px;
-        padding: 22px 16px;
+        margin-top: 132px;
+        padding: 20px 14px;
     }
 
     .top-header {
@@ -1345,17 +1330,63 @@ body.light-mode .top-nav {
         gap: 10px;
     }
 
-    .form-grid {
+    .dashboard-cards {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
 
-    .coach2-shell {
+    .form-grid,
+    .bmi-inputs {
         grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .glass-panel {
+        padding: 18px;
+    }
+
+    .coach2-root {
+        min-height: auto;
+        border-radius: 16px;
     }
 
     .coach2-live {
-        min-height: 320px;
+        min-height: 300px;
+    }
+
+    .coach2-shell {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .coach2-exercises {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .coach2-ex-btn {
+        padding: 10px;
+        border-radius: 10px;
+    }
+
+    .coach2-ex-title {
+        font-size: 0.88rem;
+    }
+
+    .coach2-ex-desc {
+        font-size: 0.72rem;
+        line-height: 1.2;
+    }
+
+    .coach2-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .coach2-controls {
+        flex-direction: row;
+    }
+
+    .coach2-controls button {
+        height: 42px;
     }
 
     .coach2-voice-actions {
@@ -1363,38 +1394,45 @@ body.light-mode .top-nav {
     }
 }
 
-@media (max-width: 768px) {
-    .logo-text {
-        font-size: 1rem;
-    }
-
+@media (max-width: 720px) {
     .nav-links li .nav-text {
         display: none;
     }
 
     .nav-links li i {
         margin-right: 0;
+        font-size: 1.05rem;
+    }
+
+    .nav-links li:not(.nav-header) {
+        padding: 10px;
+        min-width: 40px;
+        justify-content: center;
+    }
+
+    .main-content {
+        margin-top: 120px;
+        padding: 16px 10px;
+    }
+
+    .logo-text {
+        font-size: 0.96rem;
     }
 
     .hero-title {
-        font-size: 1.7rem;
+        font-size: 1.45rem;
     }
 
     .hero-section {
-        padding: 1.5rem 0;
+        padding: 1.2rem 0 0.8rem;
     }
 
-    .dashboard-cards {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-
-    .glass-panel {
-        padding: 16px;
+    .dash-card h3 {
+        font-size: 1rem;
     }
 
     .coach2-stats {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
     }
 
     .coach2-controls {
@@ -1403,13 +1441,29 @@ body.light-mode .top-nav {
 
     .coach2-controls button {
         width: 100%;
+        height: 44px;
+    }
+
+    .coach2-live {
+        min-height: 260px;
+    }
+
+    .coach2-overlay {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+    }
+
+    .coach2-pill {
+        padding: 4px 10px;
+        font-size: 0.68rem;
     }
 }
 
 @media (max-width: 560px) {
     .main-content {
-        margin-top: 106px;
-        padding: 14px 10px;
+        margin-top: 112px;
+        padding: 12px 8px;
     }
 
     .header-titles h1 {
@@ -1430,8 +1484,8 @@ body.light-mode .top-nav {
         gap: 8px;
     }
 
-    .coach2-ex-btn {
-        padding: 10px;
+    .coach2-exercises {
+        grid-template-columns: 1fr;
     }
 
     .coach2-ex-title {
@@ -1443,11 +1497,7 @@ body.light-mode .top-nav {
     }
 
     .coach2-live {
-        min-height: 230px;
-    }
-
-    .coach2-stats {
-        grid-template-columns: 1fr;
+        min-height: 220px;
     }
 
     .coach2-voice-actions {
@@ -1459,17 +1509,44 @@ body.light-mode .top-nav {
     }
 
     .floating-alert {
-        width: calc(100% - 20px);
-        left: 10px;
+        width: calc(100% - 14px);
+        left: 7px;
         transform: none;
         border-radius: 12px;
-        padding: 10px 12px;
+        padding: 9px 11px;
         font-size: 0.8rem;
     }
 
     .app-footer {
         padding: 1rem 0.5rem;
         font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .top-nav {
+        padding: 8px 8px 10px;
+        min-height: 82px;
+    }
+
+    .main-content {
+        margin-top: 106px;
+    }
+
+    .header-titles p {
+        font-size: 0.75rem;
+    }
+
+    .status-indicator {
+        display: none;
+    }
+
+    .coach2-ex-desc {
+        display: none;
+    }
+
+    .coach2-stat strong {
+        font-size: 1.08rem;
     }
 }
 
