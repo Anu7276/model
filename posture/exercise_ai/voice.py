@@ -6,10 +6,13 @@ voice.py — Advanced Voice System
 - Emotion-aware speech rate/volume
 """
 
-import pyttsx3
 import time
 import threading
 from queue import PriorityQueue, Empty
+try:
+    import pyttsx3
+except Exception:
+    pyttsx3 = None
 
 # ── TTS Engine ────────────────────────────────────────────────────────────────
 
@@ -25,10 +28,20 @@ _cooldowns: dict = {             # per-category cooldown (seconds)
 }
 _lock = threading.Lock()
 _enabled = True
+_tts_available = pyttsx3 is not None
 
 
 def _tts_worker():
-    engine = pyttsx3.init()
+    global _tts_available
+    if not _tts_available:
+        return
+
+    try:
+        engine = pyttsx3.init()
+    except Exception:
+        _tts_available = False
+        return
+
     engine.setProperty("rate", 165)
     engine.setProperty("volume", 1.0)
     voices = engine.getProperty("voices")
@@ -62,7 +75,7 @@ def speak(text: str, category: str = "default", priority: int = 5, rate: int = 1
     Speak text if cooldown for this category has passed.
     Lower priority number = spoken sooner.
     """
-    if not text or not _enabled:
+    if not text or not _enabled or not _tts_available:
         return
     now = time.time()
     cooldown = _cooldowns.get(category, _cooldowns["default"])
