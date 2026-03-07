@@ -98,6 +98,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const obj = document.getElementById(id);
         if (!obj) return;
         const range = end - start;
+        if (range === 0) {
+            obj.innerText = id.includes('val') ? end : (id.includes('score') ? end + '%' : end);
+            return;
+        }
         const minTimer = 50;
         let stepTime = Math.abs(Math.floor(duration / range));
         stepTime = Math.max(stepTime, minTimer);
@@ -116,6 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
         timer = setInterval(run, stepTime);
         run();
     };
+
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+    const lerp = (from, to, alpha) => from + (to - from) * alpha;
 
     // --- Form Handling & Visual Result Displays ---
     const handleForm = async (formId, endpoint, resultContainerId, processFunc) => {
@@ -318,6 +325,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let scoreHistory = [];
     let commandLog = [];
     let voiceEnabled = true;
+    let backendInFlight = false;
+    let backendController = null;
+    let lastBackendTick = 0;
+    let lastSparklinePaint = 0;
+    let lastWarningText = '';
+    let lastWarningAt = 0;
+    let uiAnimationId = null;
+    const BACKEND_INTERVAL_MS = 140;
+    const uiRenderState = {
+        score: 100,
+        targetScore: 100,
+        avg: 100,
+        targetAvg: 100,
+        stability: 0,
+        targetStability: 0
+    };
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
@@ -381,10 +404,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const triggerWarning = (msg) => {
+        const now = Date.now();
+        if (msg === lastWarningText && (now - lastWarningAt) < 1400) return;
+        lastWarningText = msg;
+        lastWarningAt = now;
+
         feedbackText.innerText = msg;
         feedbackBox.classList.remove('hidden');
         clearTimeout(window.warningTimeout);
-        window.warningTimeout = setTimeout(() => feedbackBox.classList.add('hidden'), 2200);
+        window.warningTimeout = setTimeout(() => feedbackBox.classList.add('hidden'), 2600);
     };
 
     const updateSparkline = () => {
@@ -410,6 +438,45 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     };
 
+    const applyScoreTone = (score) => {
+        if (score > 85) {
+            ui.score.style.color = 'var(--status-success)';
+            ui.scoreBar.style.background = 'var(--status-success)';
+        } else if (score > 65) {
+            ui.score.style.color = 'var(--status-warning)';
+            ui.scoreBar.style.background = 'var(--status-warning)';
+        } else {
+            ui.score.style.color = 'var(--status-error)';
+            ui.scoreBar.style.background = 'var(--status-error)';
+        }
+    };
+
+    const renderFitnessUiFrame = () => {
+        uiRenderState.score = lerp(uiRenderState.score, uiRenderState.targetScore, 0.22);
+        uiRenderState.avg = lerp(uiRenderState.avg, uiRenderState.targetAvg, 0.2);
+        uiRenderState.stability = lerp(uiRenderState.stability, uiRenderState.targetStability, 0.25);
+
+        if (Math.abs(uiRenderState.score - uiRenderState.targetScore) < 0.1) uiRenderState.score = uiRenderState.targetScore;
+        if (Math.abs(uiRenderState.avg - uiRenderState.targetAvg) < 0.1) uiRenderState.avg = uiRenderState.targetAvg;
+        if (Math.abs(uiRenderState.stability - uiRenderState.targetStability) < 0.001) uiRenderState.stability = uiRenderState.targetStability;
+
+        const scoreRounded = Math.round(uiRenderState.score);
+        const avgRounded = Math.round(uiRenderState.avg);
+        ui.score.innerText = `${scoreRounded}%`;
+        ui.avg.innerText = `${avgRounded}%`;
+        ui.avgText.innerText = `AVG ${avgRounded}%`;
+        ui.stability.innerText = Number(uiRenderState.stability).toFixed(3);
+        ui.scoreBar.style.width = `${clamp(uiRenderState.score, 0, 100).toFixed(1)}%`;
+        applyScoreTone(scoreRounded);
+
+        uiAnimationId = requestAnimationFrame(renderFitnessUiFrame);
+    };
+
+    const ensureFitnessUiLoop = () => {
+        if (uiAnimationId) return;
+        uiAnimationId = requestAnimationFrame(renderFitnessUiFrame);
+    };
+
     let lastRepCount = 0;
     const updateFitnessUI = (stats) => {
         const newCounter = stats.counter ?? 0;
@@ -420,26 +487,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const score = Math.round(stats.form_score ?? 100);
         const avg = Math.round(stats.avg_score ?? score);
-        ui.score.innerText = `${score}%`;
-        ui.avg.innerText = `${avg}%`;
-        ui.avgText.innerText = `AVG ${avg}%`;
+        uiRenderState.targetScore = score;
+        uiRenderState.targetAvg = avg;
         ui.timer.innerText = formatClock(stats.elapsed_time ?? 0);
-        ui.scoreBar.style.width = `${Math.max(0, Math.min(100, score))}%`;
-        ui.stability.innerText = stats.stats_v2?.stability !== undefined ? Number(stats.stats_v2.stability).toFixed(3) : "0.000";
+        uiRenderState.targetStability = stats.stats_v2?.stability !== undefined ? Number(stats.stats_v2.stability) : 0;
 
         scoreHistory.push(score);
         scoreHistory = scoreHistory.slice(-80);
-        updateSparkline();
-
-        if (score > 85) {
-            ui.score.style.color = 'var(--status-success)';
-            ui.scoreBar.style.background = 'var(--status-success)';
-        } else if (score > 65) {
-            ui.score.style.color = 'var(--status-warning)';
-            ui.scoreBar.style.background = 'var(--status-warning)';
-        } else {
-            ui.score.style.color = 'var(--status-error)';
-            ui.scoreBar.style.background = 'var(--status-error)';
+        const now = performance.now();
+        if ((now - lastSparklinePaint) > 180) {
+            updateSparkline();
+            lastSparklinePaint = now;
         }
 
         const fatigue = (stats.fatigue_status || "OPTIMAL").toUpperCase();
@@ -455,6 +513,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stats.feedback && !["Good job!", "Keep going!", "Analyzing..."].includes(stats.feedback)) {
             triggerWarning(stats.feedback);
         }
+
+        ensureFitnessUiLoop();
     };
 
     const drawSkeleton = (keypoints) => {
@@ -494,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!fitnessActive || !detector) return;
 
         const poses = await detector.estimatePoses(videoElement);
+        const now = performance.now();
 
         if (canvasElement.width !== videoElement.videoWidth || canvasElement.height !== videoElement.videoHeight) {
             canvasElement.width = videoElement.videoWidth;
@@ -508,24 +569,38 @@ document.addEventListener('DOMContentLoaded', () => {
             const landmarks = poses[0].keypoints;
             drawSkeleton(landmarks);
 
-            if (!fitnessPaused) {
-                try {
-                    const response = await fetch('/process_pose', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ exercise_type: currentExercise, landmarks })
+            const shouldProcess = !fitnessPaused && !backendInFlight && ((now - lastBackendTick) >= BACKEND_INTERVAL_MS);
+            if (shouldProcess) {
+                backendInFlight = true;
+                lastBackendTick = now;
+                const controller = new AbortController();
+                backendController = controller;
+
+                fetch('/process_pose', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ exercise_type: currentExercise, landmarks }),
+                    signal: controller.signal
+                })
+                    .then((response) => response.json())
+                    .then((stats) => {
+                        if (stats.status !== "error") {
+                            updateFitnessUI(stats);
+                            setPipe(ui.pipeTrack, true);
+                            setPipe(ui.pipeScore, true);
+                        }
+                    })
+                    .catch((err) => {
+                        if (err?.name !== 'AbortError') {
+                            console.error("Pose logic error:", err);
+                            setPipe(ui.pipeTrack, false);
+                            setPipe(ui.pipeScore, false);
+                        }
+                    })
+                    .finally(() => {
+                        if (backendController === controller) backendController = null;
+                        backendInFlight = false;
                     });
-                    const stats = await response.json();
-                    if (stats.status !== "error") {
-                        updateFitnessUI(stats);
-                        setPipe(ui.pipeTrack, true);
-                        setPipe(ui.pipeScore, true);
-                    }
-                } catch (err) {
-                    console.error("Pose logic error:", err);
-                    setPipe(ui.pipeTrack, false);
-                    setPipe(ui.pipeScore, false);
-                }
             }
         }
         canvasCtx.restore();
@@ -563,6 +638,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetCoachMetrics = () => {
         lastRepCount = 0;
         scoreHistory = [];
+        uiRenderState.score = 100;
+        uiRenderState.targetScore = 100;
+        uiRenderState.avg = 100;
+        uiRenderState.targetAvg = 100;
+        uiRenderState.stability = 0;
+        uiRenderState.targetStability = 0;
         ui.rep.innerText = '0';
         ui.score.innerText = '100%';
         ui.avg.innerText = '100%';
@@ -572,14 +653,17 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.fatigue.innerText = 'OPTIMAL';
         ui.fatigue.style.color = 'var(--status-success)';
         ui.scoreBar.style.width = '100%';
-        ui.scoreBar.style.background = 'var(--status-success)';
+        applyScoreTone(100);
         updateSparkline();
+        ensureFitnessUiLoop();
     };
 
     const startFitness = async () => {
         await initFitness();
         fitnessActive = true;
         fitnessPaused = false;
+        backendInFlight = false;
+        lastBackendTick = 0;
         resetCoachMetrics();
         setCoachState();
 
@@ -607,6 +691,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopFitness = () => {
         fitnessActive = false;
         fitnessPaused = false;
+        backendInFlight = false;
+        lastBackendTick = 0;
+        if (backendController) {
+            backendController.abort();
+            backendController = null;
+        }
         if (videoElement.srcObject) {
             videoElement.srcObject.getTracks().forEach(track => track.stop());
             videoElement.srcObject = null;
