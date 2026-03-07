@@ -930,12 +930,13 @@ body.light-mode .top-nav {
 }
 
 .coach2-controls {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
 
 .coach2-controls button {
-    flex: 1;
+    width: 100%;
     border-radius: 10px;
     border: 1px solid transparent;
     font-weight: 700;
@@ -949,6 +950,13 @@ body.light-mode .top-nav {
 .coach2-controls button:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.24);
+}
+
+.coach2-controls button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
 .coach2-primary {
@@ -966,6 +974,12 @@ body.light-mode .top-nav {
     background: rgba(239, 68, 68, 0.14);
     color: #f97373;
     border-color: rgba(239, 68, 68, 0.35);
+}
+
+.coach2-camera {
+    background: rgba(14, 165, 233, 0.15);
+    color: #7dd3fc;
+    border-color: rgba(125, 211, 252, 0.4);
 }
 
 .coach2-voice-head {
@@ -1382,7 +1396,7 @@ body.light-mode .top-nav {
     }
 
     .coach2-controls {
-        flex-direction: row;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .coach2-controls button {
@@ -1436,7 +1450,7 @@ body.light-mode .top-nav {
     }
 
     .coach2-controls {
-        flex-direction: column;
+        grid-template-columns: 1fr;
     }
 
     .coach2-controls button {

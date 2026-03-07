@@ -330,6 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let scoreHistory = [];
     let commandLog = [];
     let voiceEnabled = true;
+    let activeFacingMode = isTouchViewport() ? 'environment' : 'user';
+    let cameraSwitchInProgress = false;
     let backendInFlight = false;
     let backendController = null;
     let lastBackendTick = 0;
@@ -375,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
         startBtn: document.getElementById('start-camera'),
         stopBtn: document.getElementById('stop-camera'),
         pauseBtn: document.getElementById('pause-camera'),
+        switchCamBtn: document.getElementById('switch-camera'),
         voiceToggle: document.getElementById('coach2-voice-toggle'),
         micBtn: document.getElementById('coach2-mic-btn'),
         pipeCam: document.getElementById('pipe-cam'),
@@ -388,6 +391,80 @@ document.addEventListener('DOMContentLoaded', () => {
         el.innerText = ready ? "READY" : "IDLE";
         el.style.color = ready ? "var(--status-success)" : "#475569";
         el.style.background = ready ? "rgba(16,185,129,.15)" : "rgba(255,255,255,.06)";
+    };
+
+    const releaseCameraStream = () => {
+        if (!videoElement.srcObject) return;
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+        videoElement.srcObject = null;
+    };
+
+    const updateCameraToggleUi = () => {
+        if (!ui.switchCamBtn) return;
+        const mobile = isTouchViewport();
+        const supportsCameraApi = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        const canSwitch = mobile && supportsCameraApi;
+        if (!mobile) activeFacingMode = 'user';
+        ui.switchCamBtn.classList.toggle('hidden', !canSwitch);
+        ui.switchCamBtn.disabled = cameraSwitchInProgress;
+        ui.switchCamBtn.innerText = activeFacingMode === 'environment' ? "BACK CAM" : "FRONT CAM";
+    };
+
+    const getVideoConstraints = () => {
+        const mobile = isTouchViewport();
+        if (mobile) {
+            return {
+                facingMode: { ideal: activeFacingMode },
+                width: { ideal: activeFacingMode === 'environment' ? 960 : 720, max: 1280 },
+                height: { ideal: activeFacingMode === 'environment' ? 720 : 540, max: 960 },
+                frameRate: { ideal: 24, max: 30 }
+            };
+        }
+
+        return {
+            facingMode: 'user',
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 30 }
+        };
+    };
+
+    const attachStreamToVideo = async (stream) => {
+        videoElement.srcObject = stream;
+        if (videoElement.readyState >= 1) {
+            await videoElement.play();
+            return;
+        }
+
+        await new Promise((resolve) => {
+            videoElement.onloadedmetadata = async () => {
+                try {
+                    await videoElement.play();
+                } catch (err) {
+                    console.warn("Video play warning:", err);
+                }
+                resolve();
+            };
+        });
+    };
+
+    const requestCameraStream = async () => {
+        const primary = getVideoConstraints();
+        try {
+            return await navigator.mediaDevices.getUserMedia({ video: primary });
+        } catch (err) {
+            // If facing-mode preference fails, fall back to any available camera.
+            if (isTouchViewport()) {
+                return await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 720, max: 1280 },
+                        height: { ideal: 540, max: 960 },
+                        frameRate: { ideal: 24, max: 30 }
+                    }
+                });
+            }
+            throw err;
+        }
     };
 
     const formatClock = (secs = 0) => new Date((secs || 0) * 1000).toISOString().substr(14, 5);
@@ -674,40 +751,25 @@ document.addEventListener('DOMContentLoaded', () => {
         lastBackendTick = 0;
         resetCoachMetrics();
         setCoachState();
+        updateCameraToggleUi();
 
         try {
             if (!videoElement.srcObject) {
-                const mobileCamera = isTouchViewport();
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: mobileCamera
-                        ? {
-                            facingMode: 'user',
-                            width: { ideal: 720, max: 960 },
-                            height: { ideal: 540, max: 720 },
-                            frameRate: { ideal: 24, max: 30 }
-                        }
-                        : {
-                            facingMode: 'user',
-                            width: { ideal: 1280, max: 1920 },
-                            height: { ideal: 720, max: 1080 },
-                            frameRate: { ideal: 30, max: 30 }
-                        }
-                });
-                videoElement.srcObject = stream;
-                videoElement.onloadedmetadata = () => {
-                    videoElement.play();
-                    requestAnimationFrame(runDetection);
-                };
+                const stream = await requestCameraStream();
+                await attachStreamToVideo(stream);
+                requestAnimationFrame(runDetection);
             } else {
                 requestAnimationFrame(runDetection);
             }
             setPipe(ui.pipeCam, true);
-            addLog(`${EXERCISE_META[currentExercise].label} session started`);
+            const camLabel = activeFacingMode === 'environment' ? 'back camera' : 'front camera';
+            addLog(`${EXERCISE_META[currentExercise].label} session started (${camLabel})`);
         } catch (err) {
             console.error("Camera access error:", err);
             fitnessActive = false;
             setCoachState();
             setPipe(ui.pipeCam, false);
+            triggerWarning("Camera access denied or unavailable");
         }
     };
 
@@ -720,10 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backendController.abort();
             backendController = null;
         }
-        if (videoElement.srcObject) {
-            videoElement.srcObject.getTracks().forEach(track => track.stop());
-            videoElement.srcObject = null;
-        }
+        releaseCameraStream();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         if (uiAnimationId) {
             cancelAnimationFrame(uiAnimationId);
@@ -745,6 +804,46 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog(fitnessPaused ? "Tracking paused" : "Tracking resumed");
     };
 
+    const switchCamera = async () => {
+        if (!isTouchViewport() || cameraSwitchInProgress) return;
+        cameraSwitchInProgress = true;
+        updateCameraToggleUi();
+
+        const previousFacing = activeFacingMode;
+        activeFacingMode = activeFacingMode === 'environment' ? 'user' : 'environment';
+        updateCameraToggleUi();
+
+        if (!fitnessActive) {
+            addLog(`Camera preset: ${activeFacingMode === 'environment' ? 'back' : 'front'}`);
+            cameraSwitchInProgress = false;
+            updateCameraToggleUi();
+            return;
+        }
+
+        try {
+            if (backendController) {
+                backendController.abort();
+                backendController = null;
+            }
+            backendInFlight = false;
+            releaseCameraStream();
+
+            const stream = await requestCameraStream();
+            await attachStreamToVideo(stream);
+            setPipe(ui.pipeCam, true);
+            addLog(`Switched to ${activeFacingMode === 'environment' ? 'back' : 'front'} camera`);
+        } catch (err) {
+            console.error("Camera switch error:", err);
+            activeFacingMode = previousFacing;
+            updateCameraToggleUi();
+            triggerWarning("Could not switch camera");
+            addLog("Camera switch failed");
+        } finally {
+            cameraSwitchInProgress = false;
+            updateCameraToggleUi();
+        }
+    };
+
     const setExercise = (id) => {
         currentExercise = id;
         setCoachTheme();
@@ -763,6 +862,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (t.includes('push')) return 'pushup';
         if (t.includes('squat')) return 'squat';
         if (t.includes('side') || t.includes('raise') || t.includes('stretch') || t.includes('weight') || t.includes('hold')) return 'sidearm';
+        if (t.includes('switch camera') || t.includes('swap camera') || t.includes('flip camera') || t.includes('back camera') || t.includes('rear camera') || t.includes('front camera')) return 'camera';
         if (t.includes('mute')) return 'mute';
         return '';
     };
@@ -775,6 +875,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (cmd === 'pause') { if (!fitnessPaused) pauseFitness(); }
         else if (cmd === 'resume') { if (fitnessPaused) pauseFitness(); }
         else if (cmd === 'pushup' || cmd === 'squat' || cmd === 'sidearm') setExercise(cmd);
+        else if (cmd === 'camera') switchCamera();
         else if (cmd === 'mute') {
             voiceEnabled = false;
             ui.voiceToggle.innerText = "OFF";
@@ -805,6 +906,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('start-camera').addEventListener('click', startFitness);
     document.getElementById('stop-camera').addEventListener('click', stopFitness);
     document.getElementById('pause-camera').addEventListener('click', pauseFitness);
+    if (ui.switchCamBtn) {
+        ui.switchCamBtn.addEventListener('click', () => {
+            switchCamera();
+        });
+    }
 
     document.querySelectorAll('.coach2-ex-btn').forEach((btn) => {
         btn.addEventListener('click', () => setExercise(btn.dataset.ex));
@@ -831,7 +937,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    let lastTouchViewport = isTouchViewport();
+    window.addEventListener('resize', () => {
+        const nextTouchViewport = isTouchViewport();
+        if (nextTouchViewport !== lastTouchViewport) {
+            lastTouchViewport = nextTouchViewport;
+            if (!nextTouchViewport) activeFacingMode = 'user';
+            if (nextTouchViewport) activeFacingMode = 'environment';
+            updateCameraToggleUi();
+        }
+    });
+
     setCoachTheme();
+    updateCameraToggleUi();
     setCoachState();
     setPipe(ui.pipeCam, false);
     setPipe(ui.pipeTrack, false);
