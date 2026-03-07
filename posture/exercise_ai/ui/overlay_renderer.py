@@ -1,8 +1,16 @@
-import cv2
+try:
+    import cv2
+except Exception:
+    cv2 = None
+
 import numpy as np
 
 class OverlayRenderer:
     def __init__(self):
+        self.enabled = cv2 is not None
+        if not self.enabled:
+            return
+
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_scale_small = 0.5
         self.font_scale_med = 0.7
@@ -20,6 +28,9 @@ class OverlayRenderer:
         }
 
     def render(self, frame, stats, session_stats, fatigue_status):
+        if not self.enabled:
+            return frame
+
         h, w, _ = frame.shape
         
         # --- LEFT PANEL (Biomechanics) ---
