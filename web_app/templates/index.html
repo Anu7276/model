@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PreventAI | Intelligent Preventive Health & Movement System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- TensorFlow.js and MediaPipe for Fitness AI -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
+
+    <!-- Chart.js for Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <!-- Background Animated Particles Overlay -->
+    <div class="particles-bg"></div>
+
+    <div class="app-container">
+        <!-- Premium Top Navigation Bar -->
+        <nav class="top-nav">
+            <div class="logo">
+                <i class="fas fa-biohazard"></i>
+                <span class="logo-text">PreventAI</span>
+            </div>
+
+            <ul class="nav-links">
+                <li class="active" data-target="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span class="nav-text">Dashboard</span>
+                <li data-target="diabetes">
+                    <i class="fas fa-dna"></i>
+                    <span class="nav-text">Diabetes</span>
+                </li>
+                <li data-target="bp">
+                    <i class="fas fa-stethoscope"></i>
+                    <span class="nav-text">Hypertension</span>
+                </li>
+                <li data-target="obesity">
+                    <i class="fas fa-file-medical-alt"></i>
+                    <span class="nav-text">Obesity</span>
+                </li>
+                <li data-target="fitness">
+                    <i class="fas fa-universal-access"></i>
+                    <span class="nav-text">AI Coach</span>
+                </li>
+                <li id="theme-toggle">
+                    <i class="fas fa-moon"></i>
+                    <span class="nav-text">Theme</span>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Dynamic Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-titles">
+                    <h1 id="page-title">Intelligence Dashboard</h1>
+                    <p id="page-subtitle">Overview of preventive health and biomechanical systems.</p>
+                </div>
+                <div class="header-actions">
+                    <div class="status-indicator">
+                        <div class="pulse-dot"></div>
+                        <span>System Active</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Dashboard / Landing Page -->
+            <section id="dashboard" class="tab-content active">
+                <div class="hero-section">
+                    <h2 class="hero-title">AI-Driven Preventive Health & Movement Intelligence</h2>
+                    <p class="hero-subtitle">Detect. Analyze. Correct. Prevent.</p>
+                </div>
+
+                <div class="dashboard-cards">
+                    <div class="dash-card glass-panel"
+                        onclick="document.querySelector('[data-target=\'diabetes\']').click()">
+                        <div class="dash-icon"><i class="fas fa-notes-medical"></i></div>
+                        <h3>Health Risk Prediction</h3>
+                        <p>Clinical-grade multi-disease risk assessment using advanced ML.</p>
+                    </div>
+                    <div class="dash-card glass-panel"
+                        onclick="document.querySelector('[data-target=\'fitness\']').click()">
+                        <div class="dash-icon"><i class="fas fa-person-running"></i></div>
+                        <h3>Real-Time AI Coach</h3>
+                        <p>Live biomechanical tracking and form correction intelligence.</p>
+                    </div>
+                    <div class="dash-card glass-panel bmi-calculator-card">
+                        <div class="dash-icon"><i class="fas fa-weight-scale"></i></div>
+                        <h3>BMI Calculator</h3>
+                        <div class="bmi-form">
+                            <div class="bmi-inputs">
+                                <input type="number" id="bmi-weight" placeholder="Weight (kg)" step="0.1">
+                                <input type="number" id="bmi-height" placeholder="Height (cm)" step="1">
+                            </div>
+                            <button id="calc-bmi-btn" class="btn-predict">Calculate BMI</button>
+                        </div>
+                        <div id="bmi-result" class="bmi-result-display hidden">
+                            <span class="bmi-val">0.0</span>
+                            <span class="bmi-label">Healthy</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Diabetes Section (2-Column) -->
+            <section id="diabetes" class="tab-content">
+                <div class="two-column-layout">
+                    <!-- Left: Form -->
+                    <div class="glass-panel form-panel">
+                        <form id="diabetes-form">
+                            <div class="form-grid">
+                                <div class="form-group floating-input">
+                                    <select name="gender" required>
+                                        <option value="" disabled selected></option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <label>Gender</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" name="age" required placeholder=" ">
+                                    <label>Age (years)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="hypertension" required>
+                                        <option value="" disabled selected></option>
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                    <label>Hypertension</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="heart_disease" required>
+                                        <option value="" disabled selected></option>
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                    <label>Heart Disease</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="bmi" required placeholder=" ">
+                                    <label>BMI</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="hba1c" required placeholder=" ">
+                                    <label>HbA1c Level (%)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" name="glucose" required placeholder=" ">
+                                    <label>Blood Glucose (mg/dL)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="smoking_history" required>
+                                        <option value="" disabled selected></option>
+                                        <option value="never">Never</option>
+                                        <option value="current">Current</option>
+                                        <option value="former">Former</option>
+                                        <option value="ever">Ever</option>
+                                        <option value="not current">Not Current</option>
+                                    </select>
+                                    <label>Smoking History</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-predict">Analyze Risk Profile</button>
+                        </form>
+                    </div>
+
+                    <!-- Right: Result Area -->
+                    <div class="glass-panel result-panel">
+                        <div id="diabetes-result-container" class="result-display empty-state">
+                            <div class="waiting-state">
+                                <div class="subtle-pulse-ring"></div>
+                                <p>Awaiting Patient Data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- BP Section (2-Column) -->
+            <section id="bp" class="tab-content">
+                <div class="two-column-layout">
+                    <div class="glass-panel form-panel">
+                        <form id="bp-form">
+                            <div class="form-grid">
+                                <div class="form-group floating-input">
+                                    <input type="number" name="age" required placeholder=" ">
+                                    <label>Age</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="salt" required placeholder=" ">
+                                    <label>Daily Salt (g)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" min="1" max="10" name="stress" required placeholder=" ">
+                                    <label>Stress Score (1-10)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.5" name="sleep" required placeholder=" ">
+                                    <label>Avg Sleep (hrs)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="bmi" required placeholder=" ">
+                                    <label>BMI</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="medication" required>
+                                        <option value="None">None</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <label>Medication</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="family_history" required>
+                                        <option value="No">No</option>
+                                        <option value="Yes">Yes</option>
+                                    </select>
+                                    <label>Family BP Hist.</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="exercise" required>
+                                        <option value="Low">Low</option>
+                                        <option value="Moderate">Moderate</option>
+                                        <option value="High">High</option>
+                                    </select>
+                                    <label>Exercise Level</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="smoking" required>
+                                        <option value="Non-Smoker">Non-Smoker</option>
+                                        <option value="Smoker">Smoker</option>
+                                    </select>
+                                    <label>Smoking Status</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-predict">Assess Hypertension Risk</button>
+                        </form>
+                    </div>
+                    <div class="glass-panel result-panel">
+                        <div id="bp-result-container" class="result-display empty-state">
+                            <div class="waiting-state">
+                                <div class="subtle-pulse-ring"></div>
+                                <p>Awaiting Patient Data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Obesity Section (2-Column) -->
+            <section id="obesity" class="tab-content">
+                <div class="two-column-layout">
+                    <div class="glass-panel form-panel">
+                        <form id="obesity-form">
+                            <div class="form-grid">
+                                <div class="form-group floating-input">
+                                    <select name="gender" required>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                    </select>
+                                    <label>Gender</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" name="age" required placeholder=" ">
+                                    <label>Age</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.01" name="height" required placeholder=" ">
+                                    <label>Height (m)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="weight" required placeholder=" ">
+                                    <label>Weight (kg)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="fcvc" required placeholder=" ">
+                                    <label>Veg Intake (1-3)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="ncp" required placeholder=" ">
+                                    <label>Meals/Day (1-4)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="ch2o" required placeholder=" ">
+                                    <label>Water (1-3)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="faf" required placeholder=" ">
+                                    <label>Activity (0-3)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <input type="number" step="0.1" name="tue" required placeholder=" ">
+                                    <label>Tech Usage (0-2)</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="family_history" required>
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes</option>
+                                    </select>
+                                    <label>Family Overweight</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="favc" required>
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes</option>
+                                    </select>
+                                    <label>High Calorie Food</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="caec" required>
+                                        <option value="no">No</option>
+                                        <option value="Sometimes">Sometimes</option>
+                                        <option value="Frequently">Frequently</option>
+                                        <option value="Always">Always</option>
+                                    </select>
+                                    <label>Snacking</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="smoking" required>
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes</option>
+                                    </select>
+                                    <label>Smoking</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="scc" required>
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes</option>
+                                    </select>
+                                    <label>Calorie Monitor</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="mtrans" required>
+                                        <option value="Walking">Walking</option>
+                                        <option value="Bike">Bike</option>
+                                        <option value="Public_Transportation">Public Trans.</option>
+                                        <option value="Motorbike">Motorbike</option>
+                                        <option value="Automobile">Automobile</option>
+                                    </select>
+                                    <label>Transport</label>
+                                </div>
+                                <div class="form-group floating-input">
+                                    <select name="calc" required>
+                                        <option value="no">No</option>
+                                        <option value="Sometimes">Sometimes</option>
+                                        <option value="Frequently">Frequently</option>
+                                        <option value="Always">Always</option>
+                                    </select>
+                                    <label>Alcohol</label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-predict">Generate Lifestyle Profile</button>
+                        </form>
+                    </div>
+                    <div class="glass-panel result-panel">
+                        <div id="obesity-result-container" class="result-display empty-state">
+                            <div class="waiting-state">
+                                <div class="subtle-pulse-ring"></div>
+                                <p>Awaiting Patient Data...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Fitness AI Section (Full Width, HUD) -->
+            <section id="fitness" class="tab-content">
+                <div class="coach2-root" id="coach2-root">
+                    <div class="coach2-grid-bg"></div>
+                    <div class="coach2-glow"></div>
+
+                    <div class="coach2-shell">
+                        <div class="coach2-main">
+                            <div class="coach2-exercises glass-panel">
+                                <button class="coach2-ex-btn active" data-ex="pushup">
+                                    <span class="coach2-ex-title">Push-Ups</span>
+                                    <span class="coach2-ex-desc">Chest · Triceps · Core</span>
+                                </button>
+                                <button class="coach2-ex-btn" data-ex="squat">
+                                    <span class="coach2-ex-title">Squats</span>
+                                    <span class="coach2-ex-desc">Quads · Glutes · Core</span>
+                                </button>
+                                <button class="coach2-ex-btn" data-ex="sidearm">
+                                    <span class="coach2-ex-title">Side Weight Holding</span>
+                                    <span class="coach2-ex-desc">Deltoids · Stability · Endurance</span>
+                                </button>
+                            </div>
+
+                            <div class="coach2-live glass-panel">
+                                <video id="input_video" class="hidden"></video>
+                                <canvas id="output_canvas"></canvas>
+                                <div class="coach2-overlay">
+                                    <div class="coach2-pill">
+                                        <span id="coach2-track-dot"></span>
+                                        <span id="coach2-track-state">STANDBY</span>
+                                    </div>
+                                    <div class="coach2-pill coach2-time" id="web-timer">00:00</div>
+                                </div>
+                                <div id="web-feedback" class="floating-alert hidden">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span id="feedback-text">Keep your back straight</span>
+                                </div>
+                            </div>
+
+                            <div class="coach2-history glass-panel">
+                                <div class="coach2-history-head">
+                                    <span>Form Score History</span>
+                                    <span id="coach2-avg-text">AVG 100%</span>
+                                </div>
+                                <svg id="coach2-sparkline" viewBox="0 0 420 90" preserveAspectRatio="none"></svg>
+                            </div>
+                        </div>
+
+                        <aside class="coach2-side">
+                            <div class="coach2-stats glass-panel">
+                                <div class="coach2-stat">
+                                    <span>Reps / Hold</span>
+                                    <strong id="web-rep-val">0</strong>
+                                </div>
+                                <div class="coach2-stat">
+                                    <span>Form Score</span>
+                                    <strong id="web-score-val">100%</strong>
+                                </div>
+                                <div class="coach2-stat">
+                                    <span>Avg Score</span>
+                                    <strong id="coach2-avg-score">100%</strong>
+                                </div>
+                                <div class="coach2-stat">
+                                    <span>Stability</span>
+                                    <strong id="web-stability">0.000</strong>
+                                </div>
+                                <div class="coach2-score-bar">
+                                    <div id="web-score-bar"></div>
+                                </div>
+                                <div class="coach2-fatigue">
+                                    <span>Fatigue</span>
+                                    <strong id="web-fatigue">OPTIMAL</strong>
+                                </div>
+                            </div>
+
+                            <div class="coach2-controls glass-panel">
+                                <button id="start-camera" class="coach2-primary">START</button>
+                                <button id="pause-camera" class="coach2-secondary hidden">PAUSE</button>
+                                <button id="stop-camera" class="coach2-danger hidden">STOP</button>
+                            </div>
+
+                            <div class="coach2-voice glass-panel">
+                                <div class="coach2-voice-head">
+                                    <span>Voice Commands</span>
+                                    <button id="coach2-voice-toggle" class="coach2-toggle">ON</button>
+                                </div>
+                                <div class="coach2-voice-actions">
+                                    <button class="coach2-cmd" data-cmd="start">start</button>
+                                    <button class="coach2-cmd" data-cmd="stop">stop</button>
+                                    <button class="coach2-cmd" data-cmd="pause">pause</button>
+                                    <button class="coach2-cmd" data-cmd="resume">resume</button>
+                                    <button class="coach2-cmd" data-cmd="pushup">push up</button>
+                                    <button class="coach2-cmd" data-cmd="squat">squat</button>
+                                    <button class="coach2-cmd" data-cmd="sidearm">side weight hold</button>
+                                    <button id="coach2-mic-btn" class="coach2-cmd coach2-mic-btn">listen</button>
+                                </div>
+                                <div id="coach2-command-log" class="coach2-log"></div>
+                            </div>
+
+                            <div class="coach2-tips glass-panel">
+                                <h4 id="coach2-tips-title">Form Tips - Push-Ups</h4>
+                                <ul id="coach2-tips-list"></ul>
+                            </div>
+
+                            <div class="coach2-pipeline glass-panel">
+                                <h4>AI Pipeline</h4>
+                                <div class="coach2-pipe-row"><span>MoveNet/BlazePose</span><b id="pipe-model">READY</b></div>
+                                <div class="coach2-pipe-row"><span>Camera Feed</span><b id="pipe-cam">IDLE</b></div>
+                                <div class="coach2-pipe-row"><span>Pose Tracking</span><b id="pipe-track">IDLE</b></div>
+                                <div class="coach2-pipe-row"><span>Form Scoring</span><b id="pipe-score">IDLE</b></div>
+                                <div class="coach2-pipe-row"><span>Voice Engine</span><b id="pipe-voice">READY</b></div>
+                            </div>
+                        </aside>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Session Analytics Section -->
+            <section id="analytics" class="tab-content">
+                <div class="analytics-grid">
+                    <div class="chart-card glass-panel">
+                        <h3>Distribution Quality</h3>
+                        <canvas id="qualityChart"></canvas>
+                    </div>
+                    <div class="chart-card glass-panel">
+                        <h3>Stability Index Over Time</h3>
+                        <canvas id="stabilityChart"></canvas>
+                    </div>
+                    <div class="chart-card glass-panel">
+                        <h3>Fatigue Trend Curve</h3>
+                        <canvas id="fatigueChart"></canvas>
+                    </div>
+                    <div class="chart-card glass-panel gauge-card">
+                        <h3>Overall Injury Risk</h3>
+                        <div class="gauge-container">
+                            <div class="risk-gauge" data-risk="Low">
+                                <div class="gauge-center">
+                                    <span class="score">Low</span>
+                                    <span class="label">Calculated Risk</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Custom Footer -->
+    <footer class="app-footer">
+        <p>Built with AI-powered predictive analytics & biomechanical intelligence.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
