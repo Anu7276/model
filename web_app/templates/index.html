@@ -10,79 +10,52 @@
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- TensorFlow.js and MediaPipe for Fitness AI -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose"></script>
-
-    <!-- Chart.js for Analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- TensorFlow.js and Pose Detection for Fitness AI (pinned compatible versions) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.17.0/dist/tf-core.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.17.0/dist/tf-converter.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.17.0/dist/tf-backend-webgl.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 </head>
 
-<body>
-    <!-- Background Animated Particles Overlay -->
-    <div class="particles-bg"></div>
+<body class="dark-mode">
+    <!-- Professional Top Navigation -->
+    <nav class="top-nav">
+        <div class="logo">
+            <img src="{{ url_for('static', filename='logo.png') }}" class="brand-logo" alt="PreventAI Logo">
+            <span class="logo-text">PreventAI Health</span>
+        </div>
+        <ul class="nav-links">
+            <li data-target="dashboard" class="active">Overview</li>
+            <li data-target="diabetes">Diabetes Scan</li>
+            <li data-target="bp">Hypertension</li>
+            <li data-target="obesity">Obesity Index</li>
+            <li data-target="fitness">AI PT Coach</li>
+        </ul>
+        <div class="nav-actions">
+            <!-- Theme Toggle -->
+            <button id="theme-toggle" class="btn-icon" aria-label="Toggle Theme">
+                <i class="fas fa-sun"></i>
+            </button>
+            <button class="btn-predict btn-sm">Patient Portal</button>
+        </div>
+    </nav>
 
-    <div class="app-container">
-        <!-- Premium Top Navigation Bar -->
-        <nav class="top-nav">
-            <div class="logo">
-                <i class="fas fa-biohazard"></i>
-                <span class="logo-text">PreventAI</span>
-            </div>
+    <!-- Main Content Container -->
+    <main class="main-content">
+        <!-- Professional Hospital Hero Section -->
+        <div class="hero-section">
+            <h1 id="page-title" class="hero-title">Intelligent Preventive Health</h1>
+            <p id="page-subtitle" class="hero-subtitle">Pioneering clinical-grade risk assessment and biomechanical
+                tracking</p>
+        </div>
 
-            <ul class="nav-links">
-                <li class="active" data-target="dashboard">
-                    <i class="fas fa-home"></i>
-                    <span class="nav-text">Dashboard</span>
-                <li data-target="diabetes">
-                    <i class="fas fa-dna"></i>
-                    <span class="nav-text">Diabetes</span>
-                </li>
-                <li data-target="bp">
-                    <i class="fas fa-stethoscope"></i>
-                    <span class="nav-text">Hypertension</span>
-                </li>
-                <li data-target="obesity">
-                    <i class="fas fa-file-medical-alt"></i>
-                    <span class="nav-text">Obesity</span>
-                </li>
-                <li data-target="fitness">
-                    <i class="fas fa-universal-access"></i>
-                    <span class="nav-text">AI Coach</span>
-                </li>
-                <li id="theme-toggle">
-                    <i class="fas fa-moon"></i>
-                    <span class="nav-text">Theme</span>
-                </li>
-            </ul>
-        </nav>
-
-        <!-- Main Dynamic Content Area -->
-        <main class="main-content">
-            <header class="top-header">
-                <div class="header-titles">
-                    <h1 id="page-title">Intelligence Dashboard</h1>
-                    <p id="page-subtitle">Overview of preventive health and biomechanical systems.</p>
-                </div>
-                <div class="header-actions">
-                    <div class="status-indicator">
-                        <div class="pulse-dot"></div>
-                        <span>System Active</span>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Dashboard / Landing Page -->
+        <div class="content-area">
+            <!-- Dashboard Section -->
             <section id="dashboard" class="tab-content active">
-                <div class="hero-section">
-                    <h2 class="hero-title">AI-Driven Preventive Health & Movement Intelligence</h2>
-                    <p class="hero-subtitle">Detect. Analyze. Correct. Prevent.</p>
-                </div>
-
                 <div class="dashboard-cards">
+                    <!-- Card 1: Risk Prediction -->
                     <div class="dash-card glass-panel"
                         onclick="document.querySelector('[data-target=\'diabetes\']').click()">
                         <div class="dash-icon"><i class="fas fa-notes-medical"></i></div>
@@ -454,7 +427,8 @@
                                 <button id="start-camera" class="coach2-primary">START</button>
                                 <button id="pause-camera" class="coach2-secondary hidden">PAUSE</button>
                                 <button id="stop-camera" class="coach2-danger hidden">STOP</button>
-                                <button id="switch-camera" class="coach2-secondary coach2-camera hidden">BACK CAM</button>
+                                <button id="switch-camera" class="coach2-secondary coach2-camera hidden">BACK
+                                    CAM</button>
                             </div>
 
                             <div class="coach2-voice glass-panel">
@@ -483,7 +457,8 @@
 
                             <div class="coach2-pipeline glass-panel">
                                 <h4>AI Pipeline</h4>
-                                <div class="coach2-pipe-row"><span>MoveNet/BlazePose</span><b id="pipe-model">READY</b></div>
+                                <div class="coach2-pipe-row"><span>MoveNet/BlazePose</span><b id="pipe-model">READY</b>
+                                </div>
                                 <div class="coach2-pipe-row"><span>Camera Feed</span><b id="pipe-cam">IDLE</b></div>
                                 <div class="coach2-pipe-row"><span>Pose Tracking</span><b id="pipe-track">IDLE</b></div>
                                 <div class="coach2-pipe-row"><span>Form Scoring</span><b id="pipe-score">IDLE</b></div>
@@ -494,41 +469,14 @@
                 </div>
             </section>
 
-            <!-- Session Analytics Section -->
-            <section id="analytics" class="tab-content">
-                <div class="analytics-grid">
-                    <div class="chart-card glass-panel">
-                        <h3>Distribution Quality</h3>
-                        <canvas id="qualityChart"></canvas>
-                    </div>
-                    <div class="chart-card glass-panel">
-                        <h3>Stability Index Over Time</h3>
-                        <canvas id="stabilityChart"></canvas>
-                    </div>
-                    <div class="chart-card glass-panel">
-                        <h3>Fatigue Trend Curve</h3>
-                        <canvas id="fatigueChart"></canvas>
-                    </div>
-                    <div class="chart-card glass-panel gauge-card">
-                        <h3>Overall Injury Risk</h3>
-                        <div class="gauge-container">
-                            <div class="risk-gauge" data-risk="Low">
-                                <div class="gauge-center">
-                                    <span class="score">Low</span>
-                                    <span class="label">Calculated Risk</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
-        </main>
+
+    </main>
     </div>
 
     <!-- Custom Footer -->
     <footer class="app-footer">
-        <p>Built with AI-powered predictive analytics & biomechanical intelligence.</p>
+        <p>Built with AI-powered clinical intelligence & biomechanical tracking.</p>
     </footer>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>

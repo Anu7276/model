@@ -1,4 +1,4 @@
-﻿"""
+"""
 Stable and accurate squat coach for real-time use.
 
 Design goals:
@@ -20,6 +20,8 @@ from voice import speak
 
 
 class SquatV2Coach:
+    MIN_VIS = 0.20
+    CALIBRATION_SECONDS = 2.0
     UP = "UP"
     DOWN = "DOWN"
 
@@ -157,9 +159,11 @@ class SquatV2Coach:
         if len(self.rep_durations) < 4:
             return "FATIGUED" if frame_fatigue == "FATIGUED" else "OPTIMAL"
 
-        early = np.mean(self.rep_durations[:2])
-        recent = np.mean(self.rep_durations[-2:])
-        ratio = recent / (early + 1e-8)
+        early_list = list(self.rep_durations)[:2]
+        recent_list = list(self.rep_durations)[-2:]
+        early = sum(early_list) / len(early_list) if early_list else 1.0
+        recent = sum(recent_list) / len(recent_list) if recent_list else 1.0
+        ratio = float(recent) / (float(early) + 1e-8)
 
         if ratio >= 1.6:
             return "HIGH"
@@ -189,7 +193,7 @@ class SquatV2Coach:
         now = time.time()
 
         try:
-            if not landmarks or len(landmarks) < 29:
+            if not landmarks or len(landmarks) < 17:
                 self.current_stats = {
                     "mode": "Squat",
                     "state": self.state,
@@ -213,17 +217,17 @@ class SquatV2Coach:
                 }
 
             # Landmarks
-            l_sh, l_sh_vis = self._safe_xy_vis(landmarks, 11)
-            r_sh, r_sh_vis = self._safe_xy_vis(landmarks, 12)
-            l_hi, l_hi_vis = self._safe_xy_vis(landmarks, 23)
-            r_hi, r_hi_vis = self._safe_xy_vis(landmarks, 24)
-            l_kn, l_kn_vis = self._safe_xy_vis(landmarks, 25)
-            r_kn, r_kn_vis = self._safe_xy_vis(landmarks, 26)
-            l_an, l_an_vis = self._safe_xy_vis(landmarks, 27)
-            r_an, r_an_vis = self._safe_xy_vis(landmarks, 28)
+            l_sh, l_sh_vis = self._safe_xy_vis(landmarks, 5)
+            r_sh, r_sh_vis = self._safe_xy_vis(landmarks, 6)
+            l_hi, l_hi_vis = self._safe_xy_vis(landmarks, 11)
+            r_hi, r_hi_vis = self._safe_xy_vis(landmarks, 12)
+            l_kn, l_kn_vis = self._safe_xy_vis(landmarks, 13)
+            r_kn, r_kn_vis = self._safe_xy_vis(landmarks, 14)
+            l_an, l_an_vis = self._safe_xy_vis(landmarks, 15)
+            r_an, r_an_vis = self._safe_xy_vis(landmarks, 16)
 
-            vis_gate = max(l_kn_vis, r_kn_vis, l_hi_vis, r_hi_vis)
-            if vis_gate < 0.4:
+            vis_gate = float(max(l_kn_vis, r_kn_vis, l_hi_vis, r_hi_vis))
+            if vis_gate < self.MIN_VIS:
                 self.current_stats = {
                     "mode": "Squat",
                     "state": self.state,
@@ -254,16 +258,21 @@ class SquatV2Coach:
 
             combined_knee = self._weighted(l_knee, l_kn_vis, r_knee, r_kn_vis)
             knee_angle = self.knee_filter.filter(combined_knee)
-            symmetry = abs(l_knee - r_knee)
+            symmetry = float(abs(l_knee - r_knee))
 
-            hip_width = abs(l_hi[0] - r_hi[0]) + 1e-6
-            knee_width = abs(l_kn[0] - r_kn[0])
-            valgus_ratio = knee_width / hip_width
+            # Biomechanical Normalization
+            hip_euclidean = float(np.linalg.norm(np.array(l_hi) - np.array(r_hi))) + 1e-6
+            knee_euclidean = float(np.linalg.norm(np.array(l_kn) - np.array(r_kn)))
+            valgus_ratio = knee_euclidean / hip_euclidean
 
-            mid_sh_x = (l_sh[0] + r_sh[0]) * 0.5
-            mid_hi_x = (l_hi[0] + r_hi[0]) * 0.5
-            torso_h = abs(((l_sh[1] + r_sh[1]) * 0.5) - ((l_hi[1] + r_hi[1]) * 0.5)) + 1e-6
-            lean_ratio = self.lean_filter.filter(abs(mid_sh_x - mid_hi_x) / torso_h)
+            # Lean ratio normalized by torso length (Mid-Shoulder to Mid-Hip)
+            mid_sh = np.array([(l_sh[0] + r_sh[0]) * 0.5, (l_sh[1] + r_sh[1]) * 0.5])
+            mid_hi = np.array([(l_hi[0] + r_hi[0]) * 0.5, (l_hi[1] + r_hi[1]) * 0.5])
+            torso_len = float(np.linalg.norm(mid_sh - mid_hi)) + 1e-6
+            
+            mid_sh_x = mid_sh[0]
+            mid_hi_x = mid_hi[0]
+            lean_ratio = self.lean_filter.filter(abs(mid_sh_x - mid_hi_x) / torso_len)
 
             stability_variance = float(self.stability_tracker.update(knee_angle))
 
@@ -403,23 +412,21 @@ class SquatV2Coach:
             stats_v2 = {
                 "mode": "Squat",
                 "state": self.state,
-                "stability": round(stability_variance, 3),
-                "angle": round(float(knee_angle), 2),
-                "elbow_angle": round(float(knee_angle), 2),
-                "left_angle": round(float(l_knee), 2),
-                "right_angle": round(float(r_knee), 2),
-                "symmetry": round(float(symmetry), 2),
-                "valgus_ratio": round(float(valgus_ratio), 3),
-                "lean": round(float(lean_ratio), 3),
-                "depth_target": round(self._get_depth_target(), 1),
-                "down_threshold": round(down_threshold, 1),
-                "up_threshold": round(up_threshold, 1),
+                "stability": float(int(float(stability_variance) * 1000) / 1000.0),
+                "angle": float(int(float(knee_angle) * 100) / 100.0),
+                "elbow_angle": float(int(float(knee_angle) * 100) / 100.0),
+                "symmetry": float(int(float(symmetry) * 100) / 100.0),
+                "valgus_ratio": float(int(float(valgus_ratio) * 1000) / 1000.0),
+                "lean": float(int(float(lean_ratio) * 1000) / 1000.0),
+                "depth_target": float(int(float(self._get_depth_target()) * 10) / 10.0),
+                "down_threshold": float(int(float(down_threshold) * 10) / 10.0),
+                "up_threshold": float(int(float(up_threshold) * 10) / 10.0),
                 "rep_count": int(self.counter),
                 "score": int(self.last_score),
                 "feedback": self.feedback,
                 "error_count": len(errors),
                 "hold_time": 0.0,
-                "visibility": round(float(vis_gate), 3),
+                "visibility": float(int(float(vis_gate) * 1000) / 1000.0),
                 "errors": errors,
             }
             self.current_stats = stats_v2

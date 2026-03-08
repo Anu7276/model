@@ -83,6 +83,7 @@ class ExerciseEngine:
     EXERCISES = ("squat", "pushup", "sidearm")
 
     def __init__(self, exercise_type: str, voice_commands: bool = True):
+        self.coach = None
         self.exercise_type = exercise_type
         self._build_coach(exercise_type)
 
@@ -233,16 +234,16 @@ class ExerciseEngine:
         for a, b in self._CONNECTIONS:
             try:
                 la, lb = lms[a], lms[b]
-                if la.visibility > 0.4 and lb.visibility > 0.4:
+                if la.visibility > 0.1 and lb.visibility > 0.1:
                     pa = (int(la.x * w), int(la.y * h))
                     pb = (int(lb.x * w), int(lb.y * h))
                     cv2.line(frame, pa, pb, (0, 200, 255), 2, cv2.LINE_AA)
             except Exception:
                 pass
-        for idx in range(29):
+        for idx in range(17):
             try:
                 lm = lms[idx]
-                if lm.visibility > 0.4:
+                if lm.visibility > 0.1:
                     cx, cy = int(lm.x * w), int(lm.y * h)
                     cv2.circle(frame, (cx, cy), 4, (0, 255, 180), -1, cv2.LINE_AA)
             except Exception:
@@ -307,7 +308,7 @@ class ExerciseEngine:
         if self._thread.is_alive():
             self._thread.join(timeout=2.0)
         self.cap.release()
-        if self._mp_pose:
+        if hasattr(self, '_mp_pose') and self._mp_pose is not None:
             self._mp_pose.close()
 
 

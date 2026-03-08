@@ -1,4 +1,4 @@
-﻿"""side_arm_v2.py
+"""side_arm_v2.py
 Professional Side Weight Holding coach with stable calibration, bilateral checks, and strict rep validation.
 """
 
@@ -16,20 +16,20 @@ from voice import speak
 
 
 class SideArmV2Coach:
-    L_EAR = 7
-    R_EAR = 8
-    L_SHOULDER = 11
-    R_SHOULDER = 12
-    L_ELBOW = 13
-    R_ELBOW = 14
-    L_WRIST = 15
-    R_WRIST = 16
-    L_HIP = 23
-    R_HIP = 24
-    L_KNEE = 25
-    R_KNEE = 26
+    L_EAR = 3
+    R_EAR = 4
+    L_SHOULDER = 5
+    R_SHOULDER = 6
+    L_ELBOW = 7
+    R_ELBOW = 8
+    L_WRIST = 9
+    R_WRIST = 10
+    L_HIP = 11
+    R_HIP = 12
+    L_KNEE = 13
+    R_KNEE = 14
 
-    MIN_VIS = 0.45
+    MIN_VIS = 0.10
     CALIBRATION_SECONDS = 3.0
     CALIBRATION_MIN_SAMPLES = 15
     LEAN_WARN = 16.0
@@ -98,8 +98,11 @@ class SideArmV2Coach:
         torso_tilt = calculate_torso_tilt(s_pt, h_pt)
         lean_deviation = self._smooth(self.torso_history[side], torso_tilt)
 
+        # Normalize shoulder-ear distance by torso length for pixel-space robustness
+        torso_vector = [h_pt[0] - s_pt[0], h_pt[1] - s_pt[1]]
+        torso_len = (torso_vector[0]**2 + torso_vector[1]**2)**0.5 + 1e-6
         shoulder_ear_dist = abs(landmarks[s_idx].y - landmarks[ear_idx].y)
-        shrugging = shoulder_ear_dist < 0.04
+        shrugging = (shoulder_ear_dist / torso_len) < 0.12 # Adjusted for relative distance
 
         return {
             "angle": angle,
@@ -112,7 +115,7 @@ class SideArmV2Coach:
 
     def process(self, landmarks):
         try:
-            if not landmarks or len(landmarks) <= self.R_KNEE:
+            if not landmarks or len(landmarks) < 17:
                 return self._result("No landmarks", score=0)
 
             l_vis = float(getattr(landmarks[self.L_SHOULDER], "visibility", 0.0))
@@ -315,10 +318,10 @@ class SideArmV2Coach:
                 "lean": round(primary["lean_deviation"], 2),
                 "shrugging": bool(primary["shrugging"]),
                 "symmetry_error": bool(symmetry_err),
-                "stability": round(stability_variance, 3),
-                "baseline": round(self.baseline_angle, 2),
-                "visibility": round(self.last_visibility, 3),
-                "hold_time": round(float(self.state_machine.hold_duration), 2),
+                "stability": float(int(stability_variance * 1000) / 1000.0),
+                "baseline": float(int(self.baseline_angle * 100) / 100.0),
+                "visibility": float(int(self.last_visibility * 1000) / 1000.0),
+                "hold_time": float(int(float(self.state_machine.hold_duration) * 100) / 100.0),
                 "error_count": len(errors),
                 "errors": errors,
             }

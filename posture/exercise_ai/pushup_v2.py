@@ -1,4 +1,4 @@
-﻿"""pushup_v2.py
+"""pushup_v2.py
 Professional push-up coach with stable rep counting, calibration, scoring, and fatigue tracking.
 """
 
@@ -16,22 +16,22 @@ from voice import speak
 
 
 class PushupV2Coach:
-    L_SHOULDER = 11
-    R_SHOULDER = 12
-    L_ELBOW = 13
-    R_ELBOW = 14
-    L_WRIST = 15
-    R_WRIST = 16
-    L_HIP = 23
-    R_HIP = 24
-    L_ANKLE = 27
-    R_ANKLE = 28
+    L_SHOULDER = 5
+    R_SHOULDER = 6
+    L_ELBOW = 7
+    R_ELBOW = 8
+    L_WRIST = 9
+    R_WRIST = 10
+    L_HIP = 11
+    R_HIP = 12
+    L_ANKLE = 15
+    R_ANKLE = 16
 
-    MIN_VIS = 0.40
+    MIN_VIS = 0.10
     CALIBRATION_SECONDS = 2.0
     CALIBRATION_MIN_SAMPLES = 12
     MIN_REP_TIME = 0.85
-    DEPTH_GOOD_MAX = 105
+    DEPTH_GOOD_MAX = 118
 
     def __init__(self):
         self.state_machine = PushupStateMachine()
@@ -80,7 +80,7 @@ class PushupV2Coach:
     def process(self, landmarks):
         now = time.time()
         try:
-            if not landmarks or len(landmarks) <= self.R_ANKLE:
+            if not landmarks or len(landmarks) < 17:
                 self.feedback = "No landmarks"
                 return self._result(score=0)
 
@@ -257,11 +257,11 @@ class PushupV2Coach:
                 "score": score,
                 "feedback": self.feedback,
                 "rep_count": int(self.state_machine.reps),
-                "angle": round(elbow_angle, 2),
-                "elbow_angle": round(elbow_angle, 2),
-                "plank_deviation": round(plank_deviation, 2),
-                "stability": round(stability_variance, 3),
-                "visibility": round(confidence, 3),
+                "angle": round(float(elbow_angle), 2),
+                "elbow_angle": round(float(elbow_angle), 2),
+                "plank_deviation": round(float(plank_deviation), 2),
+                "stability": round(float(stability_variance), 3),
+                "visibility": round(float(confidence), 3),
                 "error_count": len(errors),
                 "hold_time": 0.0,
                 "errors": errors,
@@ -295,6 +295,6 @@ class PushupV2Coach:
             "total_reps": int(self.state_machine.reps),
             "avg_score": float(stats.get("avg_score", 0.0)),
             "best_rep": float(stats.get("best_rep", 0.0)),
-            "avg_tempo": round(avg_tempo, 2),
+            "avg_tempo": round(float(avg_tempo), 2),
             "fatigue": fatigue,
         }

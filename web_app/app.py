@@ -190,8 +190,14 @@ def process_pose():
 def reset_fitness():
     sid = get_session_id()
     to_delete = [k for k in ACTIVE_SESSIONS.keys() if k.startswith(sid) or k.endswith(sid)]
-    for k in to_delete: del ACTIVE_SESSIONS[k]
+    for k in to_delete: ACTIVE_SESSIONS.pop(k, None)
     return jsonify({"status": "success"})
+
+@app.route('/recommendations')
+def recommendations():
+    disease = request.args.get('disease', 'diabetes')
+    risk = request.args.get('risk', 'Low')
+    return render_template('recommendations.html', disease=disease, risk=risk)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000, host='0.0.0.0')

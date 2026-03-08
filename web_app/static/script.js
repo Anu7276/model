@@ -1,4 +1,45 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- One Euro Filter for High-Fidelity Smoothing ---
+    class OneEuroFilter {
+        constructor(freq, mincutoff = 1.0, beta = 0.0, dcutoff = 1.0) {
+            this.freq = freq;
+            this.mincutoff = mincutoff;
+            this.beta = beta;
+            this.dcutoff = dcutoff;
+            this.x = new LowPassFilter(this._alpha(mincutoff));
+            this.dx = new LowPassFilter(this._alpha(dcutoff));
+            this.lastTime = null;
+        }
+        _alpha(cutoff) {
+            const te = 1.0 / this.freq;
+            const tau = 1.0 / (2 * Math.PI * cutoff);
+            return 1.0 / (1.0 + tau / te);
+        }
+        filter(value, timestamp = null) {
+            if (this.lastTime && timestamp) this.freq = 1.0 / ((timestamp - this.lastTime) / 1000);
+            this.lastTime = timestamp;
+            const dvalue = this.x.lastValue() === null ? 0 : (value - this.x.lastValue()) * this.freq;
+            const edvalue = this.dx.filter(dvalue, this._alpha(this.dcutoff));
+            const cutoff = this.mincutoff + this.beta * Math.abs(edvalue);
+            return this.x.filter(value, this._alpha(cutoff));
+        }
+    }
+    class LowPassFilter {
+        constructor(alpha) {
+            this.y = null;
+            this.alpha = alpha;
+        }
+        filter(value, alpha = null) {
+            if (alpha) this.alpha = alpha;
+            let s;
+            if (this.y === null) s = value;
+            else s = this.alpha * value + (1.0 - this.alpha) * this.y;
+            this.y = s;
+            return s;
+        }
+        lastValue() { return this.y; }
+    }
+
     // --- Navigation Logic ---
     const navLinks = document.querySelectorAll('.nav-links li:not(.nav-header)');
     const topNav = document.querySelector('.top-nav');
@@ -11,8 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
         diabetes: { title: "Diabetes Intelligence", sub: "Clinical-grade risk assessment via Random Forest." },
         bp: { title: "Hypertension Intelligence", sub: "Predictive blood pressure diagnostics." },
         obesity: { title: "Obesity Profiling", sub: "Comprehensive body mass and lifestyle behavior assessment." },
-        fitness: { title: "AI Biomechanics Coach", sub: "Real-time posture and movement analysis." },
-        analytics: { title: "Session Analytics", sub: "Deep insights into performance and stability over time." }
+        fitness: { title: "AI Biomechanics Coach", sub: "Real-time posture and movement analysis." }
     };
 
     // --- Theme Switching Logic ---
@@ -20,25 +60,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeIcon = themeToggle.querySelector('i');
     const body = document.body;
 
-    const setTheme = (isLight) => {
-        if (isLight) {
-            body.classList.add('light-mode');
+    const setTheme = (isDark) => {
+        if (isDark) {
+            body.classList.add('dark-mode');
             themeIcon.classList.replace('fa-moon', 'fa-sun');
-            localStorage.setItem('theme', 'light');
-        } else {
-            body.classList.remove('light-mode');
-            themeIcon.classList.replace('fa-sun', 'fa-moon');
             localStorage.setItem('theme', 'dark');
+        } else {
+            body.classList.remove('dark-mode');
+            themeIcon.classList.replace('fa-sun', 'fa-moon');
+            localStorage.setItem('theme', 'light');
         }
     };
 
-    // Load saved theme
+    // Load saved theme (Default to dark if no theme is saved)
     if (localStorage.getItem('theme') === 'light') {
+        setTheme(false);
+    } else {
         setTheme(true);
     }
 
     themeToggle.addEventListener('click', () => {
-        setTheme(!body.classList.contains('light-mode'));
+        setTheme(!body.classList.contains('dark-mode'));
     });
 
     navLinks.forEach(link => {
@@ -50,6 +92,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 stopFitness();
             }
 
+            const pageAccents = {
+                dashboard: { main: "#3B82F6", muted: "rgba(59, 130, 246, 0.15)" },
+                diabetes: { main: "#F59E0B", muted: "rgba(245, 158, 11, 0.15)" },
+                bp: { main: "#F43F5E", muted: "rgba(244, 63, 94, 0.15)" },
+                obesity: { main: "#6366F1", muted: "rgba(99, 102, 241, 0.15)" },
+                fitness: { main: "#06B6D4", muted: "rgba(6, 182, 212, 0.15)" }
+            };
+
             // Update Active States
             navLinks.forEach(l => l.classList.remove('active'));
             tabContents.forEach(t => t.classList.remove('active'));
@@ -58,21 +108,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetEl = document.getElementById(target);
             if (targetEl) targetEl.classList.add('active');
 
-            // Update Header Text
+            // Update Header Text & Dynamic Accents
             if (pageInfo[target]) {
                 pageTitle.innerText = pageInfo[target].title;
                 pageSubtitle.innerText = pageInfo[target].sub;
+                
+                // Set Dynamic CSS Variables
+                const accent = pageAccents[target] || pageAccents.dashboard;
+                document.documentElement.style.setProperty('--page-accent', accent.main);
+                document.documentElement.style.setProperty('--page-accent-muted', accent.muted);
+
+                // Background Load AI Model if Fitness tab selected
+                if (target === 'fitness') {
+                    initFitness().catch(console.error);
+                }
             }
 
-            // Trigger chart animations if Analytics
-            if (target === 'analytics' && !chartsInitialized) {
-                initCharts();
-            }
         });
     });
 
     // --- Circular Progress Animation Generator ---
-    const generateRingResultHTML = (percentage, label, description, riskCategoryCls, riskCategoryName) => {
+    const generateRingResultHTML = (percentage, label, description, riskCategoryCls, riskCategoryName, diseaseType) => {
         // Circumference calculation
         const radius = 110;
         const circumference = 2 * Math.PI * radius;
@@ -90,6 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="risk-badge ${riskCategoryCls}">${riskCategoryName}</div>
             <p class="prediction-desc">${description}</p>
+            <div style="margin-top: 25px;">
+                <a href="/recommendations?disease=${diseaseType}&risk=${riskCategoryName}" class="btn-predict" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; height: 48px; padding: 0 24px; font-size: 0.85rem; background: var(--brand-primary); color: #FFFFFF; border: none; border-radius: var(--radius-md); box-shadow: var(--panel-shadow);">
+                    <i class="fas fa-person-running" style="margin-right: 10px;"></i> Suggest Exercise & Yoga
+                </a>
+            </div>
         `;
     };
 
@@ -188,7 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
             riskDesc = "Elevated risk factors present. Recommend lifestyle intervention.";
         }
 
-        return generateRingResultHTML(data.probability, "Diabetes Prob", riskDesc, themeCls, data.risk_category);
+        return generateRingResultHTML(data.probability, "Diabetes Prob", riskDesc, themeCls, data.risk_category, "diabetes");
     });
 
     // BP Result Processor
@@ -204,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
             riskDesc = "Borderline hypertension indicators detected. Monitor stress and sleep closely.";
         }
 
-        return generateRingResultHTML(data.probability, "BP Risk", riskDesc, themeCls, `${data.risk_category} Risk`);
+        return generateRingResultHTML(data.probability, "BP Risk", riskDesc, themeCls, `${data.risk_category} Risk`, "bp");
     });
 
     // Obesity Result Processor
@@ -225,100 +286,26 @@ document.addEventListener('DOMContentLoaded', () => {
             riskDesc = "Patient displays insufficient mass metrics. Recommend nutritional review.";
         }
 
-        return generateRingResultHTML(pct, "Mass Index", riskDesc, themeCls, data.simplified);
+        return generateRingResultHTML(pct, "Mass Index", riskDesc, themeCls, data.simplified, "obesity");
     });
 
-    // --- Analytics Session Charts (Chart.js Dummy Data) ---
-    let chartsInitialized = false;
-    const initCharts = () => {
-        chartsInitialized = true;
 
-        Chart.defaults.color = '#9FB3C8';
-        Chart.defaults.font.family = "'Inter', sans-serif";
-
-        // Quality Distributions
-        new Chart(document.getElementById('qualityChart'), {
-            type: 'bar',
-            data: {
-                labels: ['Squats', 'Pushups', 'Side Weight Holding', 'Lunges'],
-                datasets: [{
-                    label: 'Avg Form Score %',
-                    data: [92, 78, 88, 85],
-                    backgroundColor: 'rgba(20, 184, 166, 0.6)',
-                    borderColor: '#14B8A6',
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // Stability Curve
-        new Chart(document.getElementById('stabilityChart'), {
-            type: 'line',
-            data: {
-                labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'],
-                datasets: [{
-                    label: 'Stability Index',
-                    data: [65, 72, 70, 85, 88, 94],
-                    borderColor: '#F59E0B',
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    pointBackgroundColor: '#F59E0B'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } },
-                plugins: { legend: { display: false } }
-            }
-        });
-
-        // Fatigue Curve
-        new Chart(document.getElementById('fatigueChart'), {
-            type: 'line',
-            data: {
-                labels: ['0m', '5m', '10m', '15m', '20m', '25m'],
-                datasets: [{
-                    label: 'Fatigue Accumulation',
-                    data: [5, 12, 25, 45, 68, 89],
-                    borderColor: '#EF4444',
-                    borderDash: [5, 5],
-                    tension: 0.3,
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } },
-                plugins: { legend: { display: false } }
-            }
-        });
-    };
 
     // --- Fitness AI Logic Overhaul ---
     const EXERCISE_META = {
         pushup: {
             label: "Push-Ups",
-            accent: "#00e5ff",
+            accent: "var(--brand-primary)",
             tips: ["Elbows at 45°", "Chest near floor", "Lock out at top", "Keep core tight"]
         },
         squat: {
             label: "Squats",
-            accent: "#c962ff",
+            accent: "var(--brand-secondary)",
             tips: ["Knees over toes", "Reach parallel depth", "Chest upright", "Drive through heels"]
         },
         sidearm: {
             label: "Side Weight Holding",
-            accent: "#00e676",
+            accent: "var(--brand-accent)",
             tips: ["Hold weight at side line", "No torso lean", "Elbow straight", "Controlled hold 2-3 sec"]
         }
     };
@@ -339,8 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastWarningText = '';
     let lastWarningAt = 0;
     let uiAnimationId = null;
-    const DESKTOP_BACKEND_INTERVAL_MS = 140;
-    const MOBILE_BACKEND_INTERVAL_MS = 220;
+    const DESKTOP_BACKEND_INTERVAL_MS = 180;
+    const MOBILE_BACKEND_INTERVAL_MS = 250;
     const uiRenderState = {
         score: 100,
         targetScore: 100,
@@ -453,17 +440,25 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             return await navigator.mediaDevices.getUserMedia({ video: primary });
         } catch (err) {
+            console.warn("Primary camera constraints failed, attempting fallback...", err);
             // If facing-mode preference fails, fall back to any available camera.
             if (isTouchViewport()) {
-                return await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 720, max: 1280 },
-                        height: { ideal: 540, max: 960 },
-                        frameRate: { ideal: 24, max: 30 }
-                    }
-                });
+                try {
+                    return await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 720, max: 1280 },
+                            height: { ideal: 540, max: 960 },
+                            frameRate: { ideal: 24, max: 30 }
+                        }
+                    });
+                } catch (fallbackErr) {
+                    console.warn("Mobile fallback failed, trying plain video constraint...", fallbackErr);
+                    return await navigator.mediaDevices.getUserMedia({ video: true });
+                }
+            } else {
+                // Desktop fallback to plain video constraints
+                return await navigator.mediaDevices.getUserMedia({ video: true });
             }
-            throw err;
         }
     };
 
@@ -517,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         ui.spark.innerHTML = `
             <polyline points="0,90 ${points} 420,90" fill="color-mix(in srgb, var(--coach-accent) 18%, transparent)" stroke="none"></polyline>
-            <polyline points="${points}" fill="none" stroke="var(--coach-accent)" stroke-width="3" stroke-linejoin="round"></polyline>
+            <polyline points="${points}" fill="none" stroke="var(--coach-accent)" stroke-width="2" stroke-linejoin="round"></polyline>
         `;
     };
 
@@ -600,23 +595,46 @@ document.addEventListener('DOMContentLoaded', () => {
         ensureFitnessUiLoop();
     };
 
+    let keypointFilters = [];
+    const initFilters = (count) => {
+        keypointFilters = Array.from({ length: count }, () => ({
+            x: new OneEuroFilter(30, 0.5, 0.007, 1.0),
+            y: new OneEuroFilter(30, 0.5, 0.007, 1.0)
+        }));
+    };
+
+    const smoothKeypoints = (newKeypoints, timestamp) => {
+        if (keypointFilters.length !== newKeypoints.length) initFilters(newKeypoints.length);
+        return newKeypoints.map((kp, i) => {
+            if ((kp.score ?? 1) < 0.1) return kp;
+            const f = keypointFilters[i];
+            return {
+                ...kp,
+                x: f.x.filter(kp.x, timestamp),
+                y: f.y.filter(kp.y, timestamp)
+            };
+        });
+    };
+
     const drawSkeleton = (keypoints) => {
         const connections = [
-            [11, 12], [11, 13], [13, 15], [12, 14], [14, 16],
-            [11, 23], [12, 24], [23, 24],
-            [23, 25], [25, 27], [24, 26], [26, 28],
-            [27, 29], [29, 31], [27, 31],
-            [28, 30], [30, 32], [28, 32]
+            [0, 1], [0, 2], [1, 3], [2, 4], [5, 6], [5, 7], [7, 9], [6, 8], [8, 10],
+            [5, 11], [6, 12], [11, 12], [11, 13], [13, 15], [12, 14], [14, 16]
         ];
 
-        canvasCtx.fillStyle = '#ffffff';
-        canvasCtx.strokeStyle = 'rgba(0, 229, 255, 0.92)';
-        canvasCtx.lineWidth = 2.5;
+        // Clinical Glow Style
+        canvasCtx.lineCap = 'round';
+        canvasCtx.lineJoin = 'round';
+        canvasCtx.shadowBlur = 8;
+        canvasCtx.shadowColor = 'rgba(0, 229, 255, 0.5)';
+        
+        canvasCtx.strokeStyle = 'rgba(0, 229, 255, 0.95)';
+        canvasCtx.lineWidth = 4;
 
         connections.forEach(([i, j]) => {
             const kp1 = keypoints[i];
             const kp2 = keypoints[j];
-            if (kp1 && kp2 && (kp1.score > 0.25 || kp1.visibility > 0.25) && (kp2.score > 0.25 || kp2.visibility > 0.25)) {
+            if (kp1 && kp2 && (kp1.score ?? 1) > 0.15 && (kp2.score ?? 1) > 0.15) {
                 canvasCtx.beginPath();
                 canvasCtx.moveTo(kp1.x, kp1.y);
                 canvasCtx.lineTo(kp2.x, kp2.y);
@@ -624,11 +642,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        keypoints.forEach((kp, idx) => {
-            if (idx <= 32 && (kp.score > 0.25 || kp.visibility > 0.25)) {
+        canvasCtx.shadowBlur = 0;
+        keypoints.forEach((kp) => {
+            if ((kp.score ?? 1) > 0.15) {
+                canvasCtx.fillStyle = '#FFFFFF';
                 canvasCtx.beginPath();
-                canvasCtx.arc(kp.x, kp.y, idx > 10 ? 3 : 2, 0, 2 * Math.PI);
+                canvasCtx.arc(kp.x, kp.y, 5, 0, 2 * Math.PI);
                 canvasCtx.fill();
+                canvasCtx.strokeStyle = 'var(--coach-accent)';
+                canvasCtx.lineWidth = 2;
+                canvasCtx.stroke();
             }
         });
     };
@@ -649,7 +672,8 @@ document.addEventListener('DOMContentLoaded', () => {
         canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
 
         if (poses && poses.length > 0) {
-            const landmarks = poses[0].keypoints;
+            const rawLandmarks = poses[0].keypoints;
+            const landmarks = smoothKeypoints(rawLandmarks, now);
             drawSkeleton(landmarks);
 
             const backendInterval = isTouchViewport() ? MOBILE_BACKEND_INTERVAL_MS : DESKTOP_BACKEND_INTERVAL_MS;
@@ -660,13 +684,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const controller = new AbortController();
                 backendController = controller;
 
+                // Send pixel coordinates to maintain aspect ratio for backend angles
+                const landmarksWithVis = landmarks.map(kp => ({
+                    ...kp,
+                    visibility: kp.score ?? 1.0
+                }));
+
                 fetch('/process_pose', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ exercise_type: currentExercise, landmarks }),
+                    body: JSON.stringify({ exercise_type: currentExercise, landmarks: landmarksWithVis }),
                     signal: controller.signal
                 })
-                    .then((response) => response.json())
+                    .then((response) => {
+                        if (!response.ok) throw new Error(`Backend Error: ${response.status}`);
+                        return response.json();
+                    })
                     .then((stats) => {
                         if (stats.status !== "error") {
                             updateFitnessUI(stats);
@@ -692,14 +725,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fitnessActive) requestAnimationFrame(runDetection);
     };
 
+    let modelLoadingState = 'idle'; // 'idle', 'loading', 'ready'
     const initFitness = async () => {
-        if (detector) return;
-        const useLiteModel = isTouchViewport();
-        detector = await poseDetection.createDetector(poseDetection.SupportedModels.BlazePose, {
-            runtime: 'mediapipe',
-            solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/pose',
-            modelType: useLiteModel ? 'lite' : 'full'
-        });
+        if (detector || modelLoadingState === 'loading') return;
+        modelLoadingState = 'loading';
+        try {
+            await tf.ready();
+            const model = poseDetection.SupportedModels.MoveNet;
+            const detectorConfig = {
+                modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING,
+                enableSmoothing: true
+            };
+            detector = await poseDetection.createDetector(model, detectorConfig);
+            modelLoadingState = 'ready';
+            addLog("AI Engine Warm (Lightning)");
+        } catch (err) {
+            modelLoadingState = 'idle';
+            console.error("Failed to load pose detector:", err);
+            triggerWarning("AI Engine failed to ignite. Check connection.");
+            throw err;
+        }
     };
 
     const setCoachState = () => {
@@ -744,32 +789,44 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const startFitness = async () => {
-        await initFitness();
-        fitnessActive = true;
-        fitnessPaused = false;
-        backendInFlight = false;
-        lastBackendTick = 0;
-        resetCoachMetrics();
-        setCoachState();
-        updateCameraToggleUi();
-
-        try {
+        // Parallelize: Start camera request and model init simultaneously
+        const initPromise = initFitness();
+        const cameraPromise = (async () => {
             if (!videoElement.srcObject) {
                 const stream = await requestCameraStream();
                 await attachStreamToVideo(stream);
-                requestAnimationFrame(runDetection);
-            } else {
-                requestAnimationFrame(runDetection);
             }
+            return true;
+        })();
+
+        // Show loading indicator if model isn't ready yet
+        if (modelLoadingState !== 'ready') {
+            ui.state.innerText = "LOADING AI...";
+            ui.stateDot.style.background = "var(--brand-primary)";
+            addLog("Ignition sequence started...");
+        }
+
+        try {
+            await Promise.all([initPromise, cameraPromise]);
+            
+            fitnessActive = true;
+            fitnessPaused = false;
+            backendInFlight = false;
+            lastBackendTick = 0;
+            resetCoachMetrics();
+            setCoachState();
+            updateCameraToggleUi();
+
+            requestAnimationFrame(runDetection);
             setPipe(ui.pipeCam, true);
             const camLabel = activeFacingMode === 'environment' ? 'back camera' : 'front camera';
-            addLog(`${EXERCISE_META[currentExercise].label} session started (${camLabel})`);
+            addLog(`${EXERCISE_META[currentExercise].label} session active`);
         } catch (err) {
-            console.error("Camera access error:", err);
+            console.error("Startup error:", err);
             fitnessActive = false;
             setCoachState();
             setPipe(ui.pipeCam, false);
-            triggerWarning("Camera access denied or unavailable");
+            triggerWarning(err.message.includes('camera') ? "Camera access denied" : "AI Startup Failed");
         }
     };
 
@@ -783,6 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backendController = null;
         }
         releaseCameraStream();
+        keypointFilters = [];
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         if (uiAnimationId) {
             cancelAnimationFrame(uiAnimationId);

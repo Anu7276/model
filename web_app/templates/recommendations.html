@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Recommendations | PreventAI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ========================================================
+           CSS CUSTOM PROPERTIES / DESIGN TOKENS
+           ======================================================== */
+        :root {
+            /* Clinical Light Theme matching style.css */
+            --bg-deep: #F4F7FC;
+            --bg-primary: #FFFFFF;
+            --bg-card: #FFFFFF;
+            --bg-card-hover: #F8FAFC;
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --glass-border-hover: rgba(0, 0, 0, 0.15);
+            --text-heading: #1E293B;
+            --text-body: #334155;
+            --text-muted: #64748B;
+            --accent-teal: #0F52BA;
+            /* Main primary brand color */
+            --accent-teal-glow: rgba(15, 82, 186, 0.15);
+            --accent-purple: #0076CE;
+            /* Secondary brand color */
+            --accent-purple-glow: rgba(0, 118, 206, 0.15);
+            --accent-blue: #38BDF8;
+            --accent-amber: #D97706;
+            --status-error: #DC2626;
+            --status-success: #059669;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            --shadow-glow-teal: none;
+            --shadow-glow-purple: none;
+            --transition-fast: 150ms cubic-bezier(0.22, 1, 0.36, 1);
+            --transition-smooth: 250ms cubic-bezier(0.22, 1, 0.36, 1);
+            --transition-bounce: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* ========================================================
+           GLOBAL RESET & BASE
+           ======================================================== */
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-body);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Removed animated background orbs and noise texture for clinical look */
+
+        /* ========================================================
+           PAGE WRAPPER
+           ======================================================== */
+        .page-wrap {
+            position: relative;
+            z-index: 2;
+            padding-bottom: 80px;
+        }
+
+        /* ========================================================
+           STICKY TOP BAR
+           ======================================================== */
+        .rec-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 48px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--glass-border);
+            transition: var(--transition-fast);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--accent-teal);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+            padding: 8px 18px;
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            transition: var(--transition-smooth);
+        }
+
+        .back-link:hover {
+            transform: translateX(-4px);
+            background: rgba(59, 130, 246, 0.08);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .back-link i {
+            transition: transform var(--transition-smooth);
+        }
+
+        .back-link:hover i {
+            transform: translateX(-3px);
+        }
+
+        .topbar-brand {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--text-muted);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+        }
+
+        /* ========================================================
+           HERO SECTION
+           ======================================================== */
+        .rec-hero {
+            text-align: center;
+            padding: 70px 24px 50px;
+            position: relative;
+        }
+
+        .rec-hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 180px;
+            height: 2px;
+            background: var(--accent-teal);
+            border-radius: 2px;
+        }
+
+        /* Risk Pill */
+        .risk-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 24px;
+            border-radius: 30px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.8px;
+            margin-bottom: 22px;
+            animation: fadeSlideDown 0.6s ease-out;
+        }
+
+        .risk-pill::before {
+            content: '';
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .risk-high {
+            background: rgba(248, 113, 113, 0.1);
+            color: #f87171;
+            border: 1px solid rgba(248, 113, 113, 0.25);
+            box-shadow: 0 0 30px rgba(248, 113, 113, 0.08);
+        }
+
+        .risk-high::before {
+            background: #f87171;
+        }
+
+        .risk-normal {
+            background: rgba(52, 211, 153, 0.1);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.25);
+            box-shadow: 0 0 30px rgba(52, 211, 153, 0.08);
+        }
+
+        .risk-normal::before {
+            background: #34d399;
+        }
+
+        .risk-low {
+            background: rgba(96, 165, 250, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.25);
+            box-shadow: 0 0 30px rgba(96, 165, 250, 0.08);
+        }
+
+        .risk-low::before {
+            background: #60a5fa;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(1.6);
+            }
+        }
+
+        .hero-title {
+            font-size: 3.2rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 16px;
+            line-height: 1.1;
+            letter-spacing: -1px;
+            animation: fadeSlideDown 0.7s ease-out 0.1s both;
+        }
+
+        .hero-goal {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+            animation: fadeSlideDown 0.8s ease-out 0.2s both;
+        }
+
+        .hero-goal i {
+            color: var(--accent-teal);
+            margin-right: 8px;
+        }
+
+        @keyframes fadeSlideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ========================================================
+           SECTION TITLES
+           ======================================================== */
+        .section-header {
+            max-width: 1200px;
+            margin: 60px auto 32px;
+            padding: 0 36px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .section-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .section-icon.icon-exercise {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.15), rgba(20, 184, 166, 0.05));
+            color: var(--accent-teal);
+            box-shadow: var(--shadow-glow-teal);
+        }
+
+        .section-icon.icon-yoga {
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(168, 85, 247, 0.05));
+            color: var(--accent-purple);
+            box-shadow: var(--shadow-glow-purple);
+        }
+
+        .section-text h2 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            letter-spacing: -0.3px;
+        }
+
+        .section-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ========================================================
+           CARD GRID
+           ======================================================== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 28px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 36px;
+        }
+
+        /* ========================================================
+           ITEM CARDS — Glassmorphism Premium
+           ======================================================== */
+        .item-card {
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-card);
+            transition: transform var(--transition-smooth), box-shadow var(--transition-smooth), border-color var(--transition-smooth);
+            display: flex;
+            flex-direction: column;
+            animation: cardReveal 0.6s ease-out both;
+        }
+
+        .item-card:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+
+        .item-card:nth-child(2) {
+            animation-delay: 0.12s;
+        }
+
+        .item-card:nth-child(3) {
+            animation-delay: 0.19s;
+        }
+
+        .item-card:nth-child(4) {
+            animation-delay: 0.26s;
+        }
+
+        .item-card:hover {
+            transform: translateY(-8px) scale(1.01);
+            box-shadow: var(--shadow-card-hover);
+            border-color: var(--glass-border-hover);
+        }
+
+        .item-card.card-exercise:hover {
+            box-shadow: var(--shadow-card-hover), var(--shadow-glow-teal);
+        }
+
+        .item-card.card-yoga:hover {
+            box-shadow: var(--shadow-card-hover), var(--shadow-glow-purple);
+        }
+
+        @keyframes cardReveal {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Card Image */
+        .card-img-wrap {
+            position: relative;
+            width: 100%;
+            height: 210px;
+            overflow: hidden;
+        }
+
+        .card-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        .item-card:hover .card-img-wrap img {
+            transform: scale(1.12);
+        }
+
+        .card-img-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, var(--bg-primary) 0%, transparent 40%);
+            pointer-events: none;
+        }
+
+        .card-img-tag {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            padding: 5px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 2;
+        }
+
+        .tag-exercise {
+            background: rgba(20, 184, 166, 0.2);
+            color: #5eead4;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+        }
+
+        .tag-yoga {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        /* Card Body */
+        .card-body {
+            padding: 24px 26px 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.01));
+        }
+
+        .card-name {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 14px;
+            letter-spacing: -0.2px;
+            line-height: 1.3;
+        }
+
+        /* Benefits Label */
+        .card-benefit-label {
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .label-exercise {
+            color: var(--accent-teal);
+        }
+
+        .label-yoga {
+            color: var(--accent-purple);
+        }
+
+        /* Benefit Points */
+        .card-benefits {
+            flex: 1;
+        }
+
+        .benefit-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            background: rgba(255, 255, 255, 0.02);
+            transition: background var(--transition-fast);
+        }
+
+        .benefit-point:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .benefit-point:last-child {
+            margin-bottom: 0;
+        }
+
+        .benefit-point i {
+            margin-top: 3px;
+            flex-shrink: 0;
+            font-size: 0.7rem;
+        }
+
+        .benefit-point.bp-exercise i {
+            color: var(--accent-teal);
+        }
+
+        .benefit-point.bp-yoga i {
+            color: var(--accent-purple);
+        }
+
+        .benefit-point span {
+            font-size: 0.84rem;
+            color: var(--text-body);
+            line-height: 1.55;
+        }
+
+        /* ========================================================
+           CONDITION BENEFITS BANNER
+           ======================================================== */
+        .benefits-banner {
+            max-width: 1200px;
+            margin: 60px auto 0;
+            padding: 0 36px;
+        }
+
+        .banner-inner {
+            border-radius: var(--radius-xl);
+            padding: 42px 48px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(168, 85, 247, 0.04), rgba(20, 184, 166, 0.04));
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-card);
+        }
+
+        .banner-inner::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            right: -1px;
+            bottom: -1px;
+            left: -1px;
+            border-radius: inherit;
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.15), transparent, rgba(168, 85, 247, 0.15));
+            z-index: -1;
+            opacity: 0;
+            transition: opacity var(--transition-smooth);
+        }
+
+        .banner-inner:hover::before {
+            opacity: 1;
+        }
+
+        .banner-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .banner-title i {
+            color: var(--accent-amber);
+            font-size: 1.1rem;
+        }
+
+        .banner-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .banner-point {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            transition: var(--transition-smooth);
+        }
+
+        .banner-point:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.08);
+            transform: translateX(4px);
+        }
+
+        .banner-point i {
+            color: var(--accent-amber);
+            margin-top: 3px;
+            flex-shrink: 0;
+            font-size: 0.85rem;
+        }
+
+        .banner-point span {
+            font-size: 0.9rem;
+            color: var(--text-body);
+            line-height: 1.6;
+        }
+
+        /* ========================================================
+           FOOTER
+           ======================================================== */
+        .rec-footer {
+            text-align: center;
+            padding: 50px 20px 30px;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            letter-spacing: 0.5px;
+        }
+
+        .rec-footer span {
+            color: var(--accent-teal);
+            font-weight: 600;
+        }
+
+        /* ========================================================
+           SCROLL ANIMATIONS (intersection observer)
+           ======================================================== */
+        .reveal-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+        }
+
+        .reveal-on-scroll.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ========================================================
+           RESPONSIVE — TABLET (max-width: 1024px)
+           ======================================================== */
+        @media (max-width: 1024px) {
+            .rec-topbar {
+                padding: 16px 28px;
+            }
+
+            .hero-title {
+                font-size: 2.5rem;
+            }
+
+            .hero-goal {
+                font-size: 1rem;
+            }
+
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 22px;
+                padding: 0 28px;
+            }
+
+            .section-header {
+                padding: 0 28px;
+                margin: 50px auto 26px;
+            }
+
+            .section-text h2 {
+                font-size: 1.4rem;
+            }
+
+            .banner-inner {
+                padding: 34px 32px;
+            }
+
+            .banner-grid {
+                gap: 12px;
+            }
+
+            .benefits-banner {
+                padding: 0 28px;
+            }
+        }
+
+        /* ========================================================
+           RESPONSIVE — SMALL TABLET (max-width: 768px)
+           ======================================================== */
+        @media (max-width: 768px) {
+            .rec-topbar {
+                padding: 14px 20px;
+            }
+
+            .topbar-brand {
+                font-size: 0.7rem;
+                letter-spacing: 1.5px;
+            }
+
+            .back-link {
+                font-size: 0.82rem;
+                padding: 6px 14px;
+            }
+
+            .rec-hero {
+                padding: 50px 20px 40px;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+                letter-spacing: -0.5px;
+            }
+
+            .hero-goal {
+                font-size: 0.92rem;
+            }
+
+            .section-header {
+                padding: 0 20px;
+                margin: 45px auto 22px;
+                gap: 12px;
+            }
+
+            .section-icon {
+                width: 42px;
+                height: 42px;
+                font-size: 1.1rem;
+            }
+
+            .section-text h2 {
+                font-size: 1.25rem;
+            }
+
+            .section-text p {
+                font-size: 0.8rem;
+            }
+
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+                gap: 20px;
+                padding: 0 20px;
+            }
+
+            .card-img-wrap {
+                height: 180px;
+            }
+
+            .card-body {
+                padding: 20px 22px 24px;
+            }
+
+            .card-name {
+                font-size: 1.1rem;
+            }
+
+            .benefit-point {
+                padding: 6px 10px;
+            }
+
+            .benefit-point span {
+                font-size: 0.82rem;
+            }
+
+            .banner-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .banner-inner {
+                padding: 28px 24px;
+            }
+
+            .banner-title {
+                font-size: 1.15rem;
+            }
+
+        }
+
+        /* ========================================================
+           RESPONSIVE — MOBILE (max-width: 540px)
+           ======================================================== */
+        @media (max-width: 540px) {
+            .rec-topbar {
+                padding: 12px 16px;
+                gap: 8px;
+            }
+
+            .back-link {
+                font-size: 0.78rem;
+                padding: 6px 10px;
+                gap: 6px;
+            }
+
+            .topbar-brand {
+                font-size: 0.62rem;
+                letter-spacing: 1px;
+            }
+
+            .rec-hero {
+                padding: 40px 16px 32px;
+            }
+
+            .risk-pill {
+                font-size: 0.65rem;
+                padding: 5px 18px;
+                letter-spacing: 1.2px;
+            }
+
+            .hero-title {
+                font-size: 1.65rem;
+                letter-spacing: -0.3px;
+                line-height: 1.2;
+            }
+
+            .hero-goal {
+                font-size: 0.85rem;
+                line-height: 1.6;
+            }
+
+            .section-header {
+                padding: 0 16px;
+                margin: 38px auto 18px;
+                gap: 10px;
+            }
+
+            .section-icon {
+                width: 38px;
+                height: 38px;
+                font-size: 1rem;
+                border-radius: 10px;
+            }
+
+            .section-text h2 {
+                font-size: 1.1rem;
+            }
+
+            .section-text p {
+                font-size: 0.75rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+                padding: 0 16px;
+            }
+
+            .item-card {
+                border-radius: var(--radius-md);
+            }
+
+            .card-img-wrap {
+                height: 200px;
+            }
+
+            .card-img-tag {
+                top: 12px;
+                left: 12px;
+                font-size: 0.6rem;
+                padding: 4px 10px;
+            }
+
+            .card-body {
+                padding: 18px 18px 22px;
+            }
+
+            .card-name {
+                font-size: 1.05rem;
+                margin-bottom: 12px;
+            }
+
+            .card-benefit-label {
+                font-size: 0.62rem;
+                margin-bottom: 10px;
+            }
+
+            .benefit-point {
+                padding: 6px 8px;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+
+            .benefit-point span {
+                font-size: 0.8rem;
+                line-height: 1.5;
+            }
+
+            .benefits-banner {
+                padding: 0 16px;
+                margin-top: 45px;
+            }
+
+            .banner-inner {
+                padding: 22px 18px;
+                border-radius: var(--radius-lg);
+            }
+
+            .banner-title {
+                font-size: 1.05rem;
+                margin-bottom: 18px;
+            }
+
+            .banner-point {
+                padding: 12px 14px;
+                border-radius: var(--radius-sm);
+            }
+
+            .banner-point span {
+                font-size: 0.82rem;
+            }
+
+            .rec-footer {
+                padding: 40px 16px 24px;
+                font-size: 0.72rem;
+            }
+        }
+
+        /* ========================================================
+           RESPONSIVE — VERY SMALL MOBILE (max-width: 380px)
+           ======================================================== */
+        @media (max-width: 380px) {
+            .rec-topbar {
+                padding: 10px 12px;
+            }
+
+            .back-link {
+                font-size: 0.72rem;
+                gap: 5px;
+                padding: 5px 8px;
+            }
+
+            .topbar-brand {
+                display: none;
+            }
+
+            .hero-title {
+                font-size: 1.4rem;
+            }
+
+            .hero-goal {
+                font-size: 0.8rem;
+            }
+
+            .card-img-wrap {
+                height: 170px;
+            }
+
+            .card-body {
+                padding: 16px 14px 20px;
+            }
+
+            .card-name {
+                font-size: 0.98rem;
+            }
+
+            .benefit-point span {
+                font-size: 0.76rem;
+            }
+
+            .banner-inner {
+                padding: 18px 14px;
+            }
+
+            .banner-title {
+                font-size: 0.95rem;
+            }
+
+            .banner-point span {
+                font-size: 0.78rem;
+            }
+        }
+
+        /* ========================================================
+           RESPONSIVE — LARGE DESKTOP (min-width: 1400px)
+           ======================================================== */
+        @media (min-width: 1400px) {
+            .card-grid {
+                max-width: 1400px;
+                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                gap: 32px;
+            }
+
+            .section-header {
+                max-width: 1400px;
+            }
+
+            .benefits-banner {
+                max-width: 1400px;
+            }
+
+            .hero-title {
+                font-size: 3.6rem;
+            }
+
+            .card-img-wrap {
+                height: 240px;
+            }
+        }
+
+        /* ========================================================
+           HOVER INTERACTION — No-hover devices (touch)
+           ======================================================== */
+        @media (hover: none) {
+            .item-card:hover {
+                transform: none;
+                box-shadow: var(--shadow-card);
+            }
+
+            .item-card:hover .card-img-wrap img {
+                transform: none;
+            }
+
+            .banner-point:hover {
+                transform: none;
+            }
+        }
+
+        /* ========================================================
+           REDUCED MOTION
+           ======================================================== */
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+
+            .bg-orb {
+                animation: none;
+            }
+        }
+
+        /* ========================================================
+           LANDSCAPE MOBILE
+           ======================================================== */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .rec-hero {
+                padding: 30px 20px 25px;
+            }
+
+            .hero-title {
+                font-size: 1.5rem;
+            }
+
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
+
+            .card-img-wrap {
+                height: 150px;
+            }
+        }
+
+        /* ========================================================
+           PRINT STYLES
+           ======================================================== */
+        @media print {
+
+            .bg-canvas,
+            .bg-noise,
+            .rec-topbar {
+                display: none;
+            }
+
+            body {
+                background: #fff;
+                color: #222;
+            }
+
+            .hero-title {
+                -webkit-text-fill-color: #111;
+                color: #111;
+            }
+
+            .item-card {
+                break-inside: avoid;
+                border: 1px solid #ddd;
+                box-shadow: none;
+            }
+
+            .card-img-wrap {
+                height: 150px;
+            }
+        }
+    </style>
+</head>
+
+<body class="dark-mode">
+
+    <div class="page-wrap">
+
+        <!-- Sticky Top Bar -->
+        <div class="rec-topbar">
+            <a href="/" class="back-link">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" style="height: 48px; width: auto; margin-left: -4px;">
+                <span class="topbar-brand" style="margin: 0;">PreventAI™ Wellness</span>
+            </div>
+        </div>
+
+        <!-- Hero -->
+        <div class="rec-hero">
+            <div id="risk-pill" class="risk-pill risk-high">High Risk</div>
+            <h1 class="hero-title" id="hero-title">Care Plan</h1>
+            <p class="hero-goal"><i class="fas fa-bullseye"></i> <span id="goal-span">Loading recommendations...</span>
+            </p>
+        </div>
+
+        <!-- Exercises Section -->
+        <div class="section-header reveal-on-scroll">
+            <div class="section-icon icon-exercise"><i class="fas fa-dumbbell"></i></div>
+            <div class="section-text">
+                <h2>Recommended Exercises</h2>
+                <p>Clinically backed physical activities tailored for your condition</p>
+            </div>
+        </div>
+        <div class="card-grid" id="exercise-grid"></div>
+
+        <!-- Yoga Section -->
+        <div class="section-header reveal-on-scroll">
+            <div class="section-icon icon-yoga"><i class="fas fa-spa"></i></div>
+            <div class="section-text">
+                <h2>Yoga & Mindfulness</h2>
+                <p>Therapeutic poses and breathing techniques for holistic healing</p>
+            </div>
+        </div>
+        <div class="card-grid" id="yoga-grid"></div>
+
+        <!-- Condition Benefits Banner -->
+        <div class="benefits-banner reveal-on-scroll">
+            <div class="banner-inner">
+                <h3 class="banner-title"><i class="fas fa-star"></i> Why This Plan Matters For You</h3>
+                <div class="banner-grid" id="banner-points"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="rec-footer">
+            Personalized plan generated by <span>PreventAI™</span> clinical engine &bull; Always consult your physician
+            before starting a new exercise program.
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  FULL CONFIG — images, benefits, condition-specific data
+        // ============================================================
+        const config = {
+            bp: {
+                title: "Hypertension Care Plan",
+                High: {
+                    goal: "Lower blood pressure safely through gentle, sustained cardiovascular activity and calming yoga.",
+                    exercises: [
+                        { name: "Brisk Walking (30 min daily)", img: "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600&q=80", benefits: ["Lowers systolic BP by 5–8 mmHg over time", "Improves arterial flexibility and blood flow", "Zero-impact — safe even during hypertensive episodes"] },
+                        { name: "Swimming", img: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600&q=80", benefits: ["Water pressure aids venous return, reducing heart strain", "Full-body low-impact cardio that lowers resting heart rate", "Studies show 12-week programs reduce BP by ~9 mmHg"] },
+                        { name: "Cycling (Low Intensity)", img: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80", benefits: ["Steady-state cardio strengthens the heart muscle", "Reduces peripheral vascular resistance", "Outdoor cycling also lowers cortisol (stress hormone)"] }
+                    ],
+                    yoga: [
+                        { name: "Anulom Vilom (Alternate Nostril)", img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80", benefits: ["Activates parasympathetic system — directly lowers BP", "Balances autonomic nervous system function", "Reduces anxiety linked to hypertension"] },
+                        { name: "Bhramari Pranayama (Bee Breath)", img: "https://static.wixstatic.com/media/a27d24_c2e8830df06343cd886fadc34cad82f4~mv2.jpg/v1/fill/w_770,h_668,al_c,lg_1,q_85/a27d24_c2e8830df06343cd886fadc34cad82f4~mv2.jpg", benefits: ["Vibration-induced nitric oxide dilates blood vessels", "Clinically proven to reduce systolic & diastolic BP", "Calms mind, reducing hypertension-triggering stress"] },
+                        { name: "Shavasana (Corpse Pose)", img: "https://myyogateacher.com/yoga-asana/shavasana", benefits: ["Deep relaxation slows heart rate and dilates arteries", "Reduces cortisol and adrenaline surges", "Prevents post-exercise BP spikes as cool-down"] }
+                    ],
+                    conditionBenefits: ["Regular low-intensity cardio can reduce BP by 5–15 mmHg without medication", "Breathing-focused yoga directly activates the body's 'rest and repair' mode", "Consistent practice reduces the need for additional antihypertensive drugs", "Stress reduction from yoga lowers cortisol — a major driver of chronic hypertension"]
+                },
+                Normal: {
+                    goal: "Maintain healthy blood pressure through active lifestyle habits and regular movement.",
+                    exercises: [
+                        { name: "Jogging", img: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&q=80", benefits: ["Strengthens the heart and improves cardiac output", "Boosts HDL cholesterol which protects arteries", "Maintains elasticity of blood vessel walls"] },
+                        { name: "Cycling", img: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80", benefits: ["Moderate cardio keeps resting heart rate optimal", "Reduces risk of developing hypertension by 30%", "Improves overall cardiovascular endurance"] },
+                        { name: "Yoga", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80", benefits: ["Maintains nervous system balance for stable BP", "Improves flexibility and reduces muscle tension", "Enhances mind-body awareness for proactive health"] }
+                    ],
+                    yoga: [
+                        { name: "Surya Namaskar (Sun Salutation)", img: "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=600&q=80", benefits: ["Full-body flow that improves cardiovascular fitness", "Builds muscular endurance and joint flexibility", "Morning practice regulates circadian BP rhythms"] },
+                        { name: "Cat-Cow Pose", img: "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=600&q=80", benefits: ["Gentle spinal movement improves circulation", "Reduces back tension contributing to elevated BP", "Synchronized breathing calms the nervous system"] }
+                    ],
+                    conditionBenefits: ["Active lifestyle habits now prevent hypertension from developing later", "Regular cardio maintains arterial elasticity as you age", "Yoga creates a buffer against stress-induced BP spikes", "Maintaining fitness reduces lifetime cardiovascular risk by up to 40%"]
+                },
+                Low: {
+                    goal: "Preserve long-term cardiovascular health with gentle daily movement and breathing.",
+                    exercises: [
+                        { name: "Walking", img: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&q=80", benefits: ["Just 20 min/day makes a measurable difference", "Promotes steady blood circulation without strain", "Reduces sedentary-related cardiovascular decline"] },
+                        { name: "Stretching", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80", benefits: ["Improves vascular flexibility and arterial compliance", "Relieves muscular tension that restricts blood flow", "Can be done anywhere — low barrier to daily habit"] }
+                    ],
+                    yoga: [
+                        { name: "Gentle Stretching Yoga", img: "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=600&q=80", benefits: ["Maintains joint mobility and circulation", "Reduces stiffness that leads to sedentary behavior", "Encourages daily mindful movement habit"] },
+                        { name: "Deep Breathing (Pranayama)", img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80", benefits: ["Oxygenates blood and calms the nervous system", "Maintains healthy vagal tone for heart rate regulation", "Simple 5-minute practice with lifelong benefits"] }
+                    ],
+                    conditionBenefits: ["Even light daily movement keeps your cardiovascular system strong for decades", "Gentle yoga prevents age-related arterial stiffening", "Low-intensity daily habit is more effective than occasional intense workouts", "Breathing exercises build a resilient stress-response system"]
+                }
+            },
+            obesity: {
+                title: "Obesity Management Plan",
+                High: {
+                    goal: "Burn calories, reduce visceral fat, and boost metabolic rate through targeted activity.",
+                    exercises: [
+                        { name: "Jogging", img: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&q=80", benefits: ["Burns 400–600 kcal/hour — high calorie-burning exercise", "Triggers EPOC (afterburn) for continued fat oxidation", "Reduces dangerous visceral fat around organs"] },
+                        { name: "Jump Rope", img: "https://images.unsplash.com/photo-1601422407692-ec4eeec1d9b3?w=600&q=80", benefits: ["Burns ~1000 kcal/hour — extremely efficient for fat loss", "Improves coordination, agility, and endurance", "Boosts metabolism for hours after the session"] },
+                        { name: "Cycling", img: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80", benefits: ["Low-impact — easier on joints for heavier individuals", "Steady-state fat burning at moderate intensity", "Builds leg muscle increasing resting metabolic rate"] },
+                        { name: "Burpees", img: "https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?w=600&q=80", benefits: ["Full-body HIIT movement that torches calories rapidly", "Builds functional strength and explosive power", "Elevates heart rate for maximum fat-burning zone"] }
+                    ],
+                    yoga: [
+                        { name: "Surya Namaskar (Sun Salutation)", img: "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=600&q=80", benefits: ["12-pose flow burns significant calories in rounds", "Engages every major muscle group for total body toning", "Improves metabolism and thyroid function"] },
+                        { name: "Boat Pose (Navasana)", img: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&q=80", benefits: ["Intense core engagement burns abdominal fat", "Strengthens hip flexors and spine for posture", "Improves digestive fire (Agni) aiding metabolism"] }
+                    ],
+                    conditionBenefits: ["Combining HIIT with yoga creates a sustainable fat-loss strategy", "Afterburn effect means you burn calories even after stopping", "Yoga addresses emotional eating by reducing cortisol and anxiety", "Building lean muscle permanently raises resting metabolic rate"]
+                },
+                Normal: {
+                    goal: "Maintain healthy weight and improve body composition with balanced activity.",
+                    exercises: [
+                        { name: "Brisk Walking", img: "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600&q=80", benefits: ["Sustainable daily habit that prevents weight regain", "Burns 250–350 kcal/hour at a brisk pace", "Reduces insulin resistance and improves metabolism"] },
+                        { name: "Cycling", img: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80", benefits: ["Builds lean muscle, increasing basal metabolic rate", "Enjoyable activity that promotes consistency", "Moderate intensity keeps cortisol low while burning fat"] },
+                        { name: "Bodyweight Squats", img: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&q=80", benefits: ["Targets largest muscle groups for max calorie burn", "Improves functional strength for daily activities", "No equipment needed — do them anywhere"] }
+                    ],
+                    yoga: [
+                        { name: "Surya Namaskar", img: "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=600&q=80", benefits: ["Full-body active yoga that maintains lean body mass", "Boosts morning metabolism for all-day calorie burning", "Improves flexibility and prevents exercise injuries"] },
+                        { name: "Plank Pose", img: "https://images.unsplash.com/photo-1566241142559-40e1dab266c6?w=600&q=80", benefits: ["Strengthens deep core muscles for better posture", "Isometric hold builds endurance without joint stress", "Activates multiple muscle groups simultaneously"] }
+                    ],
+                    conditionBenefits: ["Maintaining weight prevents metabolic syndrome and related conditions", "Strength training preserves muscle mass that declines with age", "Active yoga improves body awareness, preventing overeating", "Consistent moderate exercise keeps metabolism running efficiently"]
+                },
+                Low: {
+                    goal: "Stay active, flexible, and build healthy movement habits for long-term wellness.",
+                    exercises: [
+                        { name: "Walking", img: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&q=80", benefits: ["Foundation of an active lifestyle — builds daily habit", "Gentle enough for any fitness level, yet effective", "Improves mood, energy, and sleep quality"] },
+                        { name: "Stretching", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80", benefits: ["Increases range of motion and prevents injury", "Reduces muscle soreness and improves recovery", "Promotes circulation and joint health"] }
+                    ],
+                    yoga: [
+                        { name: "Cat-Cow Pose", img: "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=600&q=80", benefits: ["Gentle spinal mobilization improves posture", "Synchronized breathing reduces stress eating triggers", "Warms up the body for further activity"] },
+                        { name: "Child's Pose (Balasana)", img: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&q=80", benefits: ["Deeply restorative — reduces cortisol driving fat storage", "Stretches hips, thighs, and ankles gently", "Mental reset that improves body relationship"] }
+                    ],
+                    conditionBenefits: ["Building a gentle daily habit is the strongest predictor of long-term weight management", "Flexibility work prevents inactivity spirals leading to weight gain", "Restorative yoga addresses the stress-cortisol-fat-storage cycle", "Even 15 min daily movement dramatically improves metabolic markers"]
+                }
+            },
+            diabetes: {
+                title: "Diabetes Control Plan",
+                High: {
+                    goal: "Control blood sugar levels and improve insulin sensitivity with targeted exercises.",
+                    exercises: [
+                        { name: "Brisk Walking", img: "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600&q=80", benefits: ["Post-meal walking reduces glucose spikes by up to 30%", "Improves insulin sensitivity in muscle cells", "Low-impact and safe even for diabetic neuropathy"] },
+                        { name: "Cycling", img: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&q=80", benefits: ["Aerobic exercise lowers blood glucose for 24+ hours", "Builds leg muscle mass which acts as a glucose sink", "Reduces HbA1c levels by 0.5–0.7% with regular practice"] },
+                        { name: "Light Resistance Training", img: "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=600&q=80", benefits: ["More muscle means better glucose absorption & control", "Resistance training improves insulin sensitivity 48 hours", "Prevents sarcopenia that worsens diabetic outcomes"] }
+                    ],
+                    yoga: [
+                        { name: "Vajrasana (Thunderbolt Pose)", img: "https://images.unsplash.com/photo-1545389336-cf090694435e?w=600&q=80", benefits: ["Improves digestion, reducing post-meal glucose spikes", "Stimulates the pancreas for better insulin production", "Practice immediately after meals for best results"] },
+                        { name: "Dhanurasana (Bow Pose)", img: "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=600&q=80", benefits: ["Massages and stimulates the pancreatic region", "Strengthens abdominal muscles, reducing visceral fat", "Improves blood flow to digestive organs"] }
+                    ],
+                    conditionBenefits: ["Post-meal walking is clinically proven to reduce dangerous glucose spikes by 30%", "Building muscle through resistance training creates permanent glucose-absorbing tissue", "Yoga targeting the pancreas can improve natural insulin production", "Regular exercise can reduce HbA1c as effectively as some oral medications"]
+                },
+                Normal: {
+                    goal: "Maintain stable glucose levels and build metabolic resilience through balanced fitness.",
+                    exercises: [
+                        { name: "Walking", img: "https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=600&q=80", benefits: ["Consistent daily walking maintains insulin sensitivity", "Prevents the gradual glucose creep seen in pre-diabetes", "Improves circulation to extremities — prevents complications"] },
+                        { name: "Swimming", img: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600&q=80", benefits: ["Whole-body exercise improves glucose uptake across muscles", "Low-impact — ideal for those with joint issues from diabetes", "Cool water helps regulate body temperature during exercise"] },
+                        { name: "Yoga", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80", benefits: ["Stress reduction lowers cortisol which raises blood sugar", "Improves sleep quality — poor sleep worsens glucose control", "Mind-body connection promotes healthier eating choices"] }
+                    ],
+                    yoga: [
+                        { name: "Surya Namaskar", img: "https://images.unsplash.com/photo-1599901860904-17e6ed7083a0?w=600&q=80", benefits: ["Dynamic flow keeps glucose metabolism active all day", "Stimulates endocrine system for hormonal balance", "Morning practice sets glucose levels for the entire day"] },
+                        { name: "Tree Pose (Vrikshasana)", img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80", benefits: ["Balance work improves proprioception (often impaired)", "Leg strengthening increases glucose absorption capacity", "Focus reduces stress-driven blood sugar fluctuations"] }
+                    ],
+                    conditionBenefits: ["Moderate exercise now prevents diabetes from progressing to higher risk", "Swimming and yoga together address physical and mental glucose control", "Morning Surya Namaskar can set your metabolic tone for the entire day", "Balance exercises help prevent falls — a common risk as diabetes progresses"]
+                },
+                Low: {
+                    goal: "Prevent diabetes risk and build lifelong healthy habits through gentle daily movement.",
+                    exercises: [
+                        { name: "Stretching", img: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=600&q=80", benefits: ["Improves blood flow and nutrient delivery to muscles", "Reduces stiffness that discourages physical activity", "Prevents the sedentary pattern leading to insulin resistance"] },
+                        { name: "Light Walking", img: "https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600&q=80", benefits: ["Even 15-minute walks significantly improve glucose metabolism", "Easiest habit to build — no equipment, no gym needed", "Reduces diabetes risk by 26% with daily practice"] }
+                    ],
+                    yoga: [
+                        { name: "Gentle Yoga Flow", img: "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=600&q=80", benefits: ["Low-intensity movement sustainably improves fitness", "Reduces stress hormones impairing glucose tolerance", "Builds body awareness for healthier lifestyle choices"] },
+                        { name: "Pranayama (Breath Control)", img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=80", benefits: ["Deep breathing improves cellular oxygenation & metabolism", "Vagus nerve stimulation improves pancreatic function", "Daily 10-min practice measurably reduces fasting glucose"] }
+                    ],
+                    conditionBenefits: ["Starting gentle exercise now can prevent diabetes from ever developing", "Daily walking reduces lifetime diabetes risk by over 25%", "Pranayama directly stimulates the vagus nerve governing insulin release", "Building these habits early creates a metabolic safety net for your future"]
+                }
+            }
+        };
+
+        // ============================================================
+        //  RENDERING
+        // ============================================================
+        const disease = "{{ disease }}";
+        const risk = "{{ risk }}";
+
+        let effectiveRisk = "Low";
+        const r = risk.toLowerCase();
+        if (r.includes("high") || r.includes("obese")) effectiveRisk = "High";
+        else if (r.includes("normal") || r.includes("elevated") || r.includes("moderate") || r.includes("healthy") || r.includes("overweight")) effectiveRisk = "Normal";
+        else effectiveRisk = "Low";
+
+        const diseaseData = config[disease];
+        const data = diseaseData ? diseaseData[effectiveRisk] : null;
+
+        if (data) {
+            document.getElementById('hero-title').innerText = diseaseData.title;
+            const pill = document.getElementById('risk-pill');
+            pill.innerText = risk;
+            pill.className = `risk-pill risk-${effectiveRisk.toLowerCase()}`;
+            document.getElementById('goal-span').innerText = data.goal;
+
+            const exGrid = document.getElementById('exercise-grid');
+            data.exercises.forEach(item => { exGrid.innerHTML += buildCard(item, 'exercise'); });
+
+            const yogaGrid = document.getElementById('yoga-grid');
+            data.yoga.forEach(item => { yogaGrid.innerHTML += buildCard(item, 'yoga'); });
+
+            const bannerPts = document.getElementById('banner-points');
+            data.conditionBenefits.forEach(b => {
+                bannerPts.innerHTML += `<div class="banner-point"><i class="fas fa-check-circle"></i><span>${b}</span></div>`;
+            });
+        }
+
+        function buildCard(item, type) {
+            const tagCls = type === 'exercise' ? 'tag-exercise' : 'tag-yoga';
+            const tagLbl = type === 'exercise' ? 'Exercise' : 'Yoga';
+            const lblCls = type === 'exercise' ? 'label-exercise' : 'label-yoga';
+            const bpCls = type === 'exercise' ? 'bp-exercise' : 'bp-yoga';
+            const cardCls = type === 'exercise' ? 'card-exercise' : 'card-yoga';
+
+            let benefitsHTML = item.benefits.map(b =>
+                `<div class="benefit-point ${bpCls}"><i class="fas fa-circle-check"></i><span>${b}</span></div>`
+            ).join('');
+
+            return `
+            <div class="item-card ${cardCls}">
+                <div class="card-img-wrap">
+                    <img src="${item.img}" alt="${item.name}" loading="lazy" onerror="this.parentElement.style.background='linear-gradient(135deg, rgba(20,184,166,0.08), rgba(59,130,246,0.08))'; this.style.display='none';">
+                    <div class="card-img-overlay"></div>
+                    <span class="card-img-tag ${tagCls}">${tagLbl}</span>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-name">${item.name}</h4>
+                    <p class="card-benefit-label ${lblCls}"><i class="fas fa-heart-pulse"></i> Benefits for your condition</p>
+                    <div class="card-benefits">${benefitsHTML}</div>
+                </div>
+            </div>`;
+        }
+
+        // ============================================================
+        //  SCROLL REVEAL — Intersection Observer
+        // ============================================================
+        const revealEls = document.querySelectorAll('.reveal-on-scroll');
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+            revealEls.forEach(el => observer.observe(el));
+        } else {
+            revealEls.forEach(el => el.classList.add('revealed'));
+        }
+    </script>
+</body>
+
+</html>
