@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PreventAI | Intelligent Preventive Health & Movement System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -27,11 +27,11 @@
             <span class="logo-text">PreventAI Health</span>
         </div>
         <ul class="nav-links">
-            <li data-target="dashboard" class="active">Overview</li>
-            <li data-target="diabetes">Diabetes Scan</li>
-            <li data-target="bp">Hypertension</li>
-            <li data-target="obesity">Obesity Index</li>
-            <li data-target="fitness">AI PT Coach</li>
+            <li data-target="dashboard" class="active"><i class="fas fa-chart-line"></i><span class="nav-text">Overview</span></li>
+            <li data-target="diabetes"><i class="fas fa-droplet"></i><span class="nav-text">Diabetes Scan</span></li>
+            <li data-target="bp"><i class="fas fa-heart-pulse"></i><span class="nav-text">Hypertension</span></li>
+            <li data-target="obesity"><i class="fas fa-weight-scale"></i><span class="nav-text">Obesity Index</span></li>
+            <li data-target="fitness"><i class="fas fa-person-running"></i><span class="nav-text">AI PT Coach</span></li>
         </ul>
         <div class="nav-actions">
             <!-- Theme Toggle -->
@@ -46,10 +46,38 @@
     <main class="main-content">
         <!-- Professional Hospital Hero Section -->
         <div class="hero-section">
-            <h1 id="page-title" class="hero-title">PreventAI Health Intelligence</h1>
-            <p id="page-subtitle" class="hero-subtitle">
-AI-powered clinical risk prediction and
-real-time biomechanics coaching platform.</p>
+            <div class="hero-grid">
+                <div class="hero-copy">
+                    <span class="hero-eyebrow"><i class="fas fa-star"></i> Preventive Intelligence Platform</span>
+                    <h1 id="page-title" class="hero-title">Intelligent Preventive Health</h1>
+                    <p id="page-subtitle" class="hero-subtitle">Clinical-grade disease risk prediction and real-time biomechanical analysis for proactive care pathways.</p>
+                    <div class="hero-highlights">
+                        <div class="hero-highlight"><i class="fas fa-shield-heart"></i><span>Evidence-aligned risk scoring</span></div>
+                        <div class="hero-highlight"><i class="fas fa-person-running"></i><span>Real-time biomechanical capture</span></div>
+                        <div class="hero-highlight"><i class="fas fa-lock"></i><span>Privacy-forward patient controls</span></div>
+                        <div class="hero-highlight"><i class="fas fa-clipboard-check"></i><span>Clinician-ready reports</span></div>
+                    </div>
+                </div>
+                <div class="hero-media">
+                    <div class="hero-video-card">
+                        <div class="hero-video hero-video-motion" role="img"
+                            aria-label="Preventive care signal visualization"></div>
+                        <div class="hero-video-overlay"></div>
+                        <div class="hero-video-badges">
+                            <div class="hero-badge"><i class="fas fa-wave-square"></i><span>Live gait signal</span></div>
+                            <div class="hero-badge"><i class="fas fa-heart-pulse"></i><span>Vitals-ready feed</span></div>
+                        </div>
+                    </div>
+                    <div class="hero-mosaic">
+                        <img src="{{ url_for('static', filename='media/hero-clinician.png') }}"
+                            alt="Clinician reviewing real-time patient analytics" loading="lazy" decoding="async">
+                        <img src="{{ url_for('static', filename='media/hero-team.png') }}"
+                            alt="Medical team collaborating on patient care pathway" loading="lazy" decoding="async">
+                        <img src="{{ url_for('static', filename='media/hero-assessment.png') }}"
+                            alt="3D biomechanical assessment and posture correction" loading="lazy" decoding="async">
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="content-area">

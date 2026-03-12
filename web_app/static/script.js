@@ -368,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
         voiceToggle: document.getElementById('coach2-voice-toggle'),
         micBtn: document.getElementById('coach2-mic-btn'),
         pipeCam: document.getElementById('pipe-cam'),
+        pipeModel: document.getElementById('pipe-model'),
         pipeTrack: document.getElementById('pipe-track'),
         pipeScore: document.getElementById('pipe-score'),
         pipeVoice: document.getElementById('pipe-voice')
@@ -511,8 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join(' ');
 
         ui.spark.innerHTML = `
-            <polyline points="0,90 ${points} 420,90" fill="color-mix(in srgb, var(--coach-accent) 18%, transparent)" stroke="none"></polyline>
-            <polyline points="${points}" fill="none" stroke="var(--coach-accent)" stroke-width="2" stroke-linejoin="round"></polyline>
+            <defs>
+                <linearGradient id="sparkline-gradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--coach-accent)" stop-opacity="0.2"/>
+                    <stop offset="100%" stop-color="var(--coach-accent)" stop-opacity="0"/>
+                </linearGradient>
+            </defs>
+            <polyline points="0,90 ${points} 420,90" fill="url(#sparkline-gradient)" stroke="none"></polyline>
+            <polyline points="${points}" fill="none" stroke="var(--coach-accent)" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px var(--coach-accent)); opacity: 0.8;"></polyline>
         `;
     };
 
@@ -738,6 +745,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             detector = await poseDetection.createDetector(model, detectorConfig);
             modelLoadingState = 'ready';
+            setPipe(ui.pipeModel, true);
             addLog("AI Engine Warm (Lightning)");
         } catch (err) {
             modelLoadingState = 'idle';
@@ -848,6 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         fetch('/reset_fitness', { method: 'POST' });
         setPipe(ui.pipeCam, false);
+        setPipe(ui.pipeModel, false);
         setPipe(ui.pipeTrack, false);
         setPipe(ui.pipeScore, false);
         setCoachState();

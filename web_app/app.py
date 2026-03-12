@@ -181,7 +181,7 @@ def process_pose():
         stats['elapsed_time'] = int(time.time() - session_meta['start'])
         session_meta['history'].append(stats.get('form_score', 100))
         stats['avg_score'] = sum(session_meta['history']) / len(session_meta['history'])
-
+        
         return jsonify(stats)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
