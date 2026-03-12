@@ -508,9 +508,9 @@
         /* ========================================================
            RESPONSIVE — TABLET (max-width: 1024px)
            ======================================================== */
-        @media (max-width: 1366px) {
+        @media (min-width: 1024px) and (max-width: 1366px) {
             .card-grid {
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 22px;
             }
 
