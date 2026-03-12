@@ -587,6 +587,23 @@
         }
 
         /* ========================================================
+           RESPONSIVE — IMAGE TUNING (max-width: 640px)
+           ======================================================== */
+        @media (max-width: 640px) {
+            .hero-media-wrap {
+                height: 200px;
+            }
+
+            .card-img-wrap {
+                height: 170px;
+            }
+
+            .card-img-wrap img {
+                object-position: center 30%;
+            }
+        }
+
+        /* ========================================================
            RESPONSIVE — MOBILE (max-width: 540px)
            ======================================================== */
         @media (max-width: 540px) {
@@ -722,6 +739,20 @@
             .rec-footer {
                 padding: 40px 16px 24px;
                 font-size: 0.72rem;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .hero-media-wrap {
+                height: 180px;
+            }
+
+            .card-img-wrap {
+                height: 150px;
+            }
+
+            .card-img-wrap img {
+                object-position: center 35%;
             }
         }
 
