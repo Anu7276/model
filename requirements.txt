@@ -7,3 +7,4 @@ pyttsx3==2.90
 SpeechRecognition==3.10.0
 opencv-python==4.10.0.84
 mediapipe==0.10.14
+gunicorn==22.0.0

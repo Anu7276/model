@@ -27,3 +27,5 @@ output.log
 # Optional local media/temp
 *.tmp
 *.temp
+
+.vercel

@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: models-2-0
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web_app.app:app
+    autoDeploy: true
