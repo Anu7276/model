@@ -28,4 +28,10 @@ output.log
 *.tmp
 *.temp
 
+# Datasets & training artifacts (not needed at runtime)
+health ai/plots/
+health ai/diabetes_prediction_dataset.csv/
+bp/*.csv
+obesity/*.csv
+
 .vercel
