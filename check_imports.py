@@ -1,7 +1,7 @@
 import sys
 import os
 
-BASE_DIR = r"c:\Users\Anurag\OneDrive\Pictures\models 2.0"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EXERCISE_AI_PATH = os.path.join(BASE_DIR, "posture", "exercise_ai")
 sys.path.append(EXERCISE_AI_PATH)
 

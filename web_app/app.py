@@ -1,10 +1,17 @@
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import joblib
 import numpy as np
 import pandas as pd
 import os
 import sys
 import time
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- PATH CONFIGURATION ---
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -15,11 +22,30 @@ from squat_v2 import SquatV2Coach
 from pushup_v2 import PushupV2Coach
 from side_arm_v2 import SideArmV2Coach
 
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-key-123')
+
+# Enable CORS for frontend development
+CORS(app)
+
+# Initialize Rate Limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[os.getenv('RATELIMIT_DEFAULT', "100/day")],
+    storage_uri="memory://",
+)
+
 # Production-Grade Session Management
 ACTIVE_SESSIONS = {}
 
 def get_session_id():
-    # In production, this would use a session cookie or JWT
+    # In production, we'd extract user_id from Supabase JWT
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith('Bearer '):
+        # Placeholder for JWT verification
+        # For now, we still use IP but identify it's ready for tokens
+        pass
     return request.remote_addr
 
 def get_coach(ex_type):
@@ -33,8 +59,6 @@ def get_coach(ex_type):
         
     return ACTIVE_SESSIONS[session_key]
 
-app = Flask(__name__)
-
 DIABETES_MODELS = os.path.join(BASE_DIR, "health ai", "models")
 BP_MODELS = os.path.join(BASE_DIR, "bp_model", "models")
 OBESITY_MODELS = os.path.join(BASE_DIR, "obesity_model", "models")
@@ -45,11 +69,8 @@ def load_standard_artifacts(directory, model_name):
     feature_cols = joblib.load(os.path.join(directory, "feature_columns.pkl"))
     return model, scaler, feature_cols
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/predict/diabetes', methods=['POST'])
+@app.route('/api/predict/diabetes', methods=['POST'])
+@limiter.limit(os.getenv('RATELIMIT_PREDICT', "10/minute"))
 def predict_diabetes():
     try:
         data = request.json
@@ -82,7 +103,8 @@ def predict_diabetes():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
-@app.route('/predict/bp', methods=['POST'])
+@app.route('/api/predict/bp', methods=['POST'])
+@limiter.limit(os.getenv('RATELIMIT_PREDICT', "10/minute"))
 def predict_bp():
     try:
         data = request.json
@@ -112,7 +134,8 @@ def predict_bp():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
-@app.route('/predict/obesity', methods=['POST'])
+@app.route('/api/predict/obesity', methods=['POST'])
+@limiter.limit(os.getenv('RATELIMIT_PREDICT', "10/minute"))
 def predict_obesity():
     try:
         data = request.json
@@ -149,7 +172,7 @@ def predict_obesity():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
-@app.route('/process_pose', methods=['POST'])
+@app.route('/api/process_pose', methods=['POST'])
 def process_pose():
     try:
         data = request.json
@@ -186,18 +209,38 @@ def process_pose():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
-@app.route('/reset_fitness', methods=['POST'])
-def reset_fitness():
-    sid = get_session_id()
-    to_delete = [k for k in ACTIVE_SESSIONS.keys() if k.startswith(sid) or k.endswith(sid)]
-    for k in to_delete: ACTIVE_SESSIONS.pop(k, None)
-    return jsonify({"status": "success"})
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    try:
+        from groq import Groq
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        
+        data = request.json
+        messages = data.get('messages', [])
+        
+        system_prompt = {
+            "role": "system",
+            "content": "You are PreventAI, a highly intelligent and empathetic Healthcare Expert and Medical AI. Your goal is to provide accurate, evidence-based health advice. You should: 1. Use clinical language but remain accessible. 2. Always recommend professional consultation for serious symptoms. 3. Suggest reputable web resources (Mayo Clinic, NHS, CDC). 4. Help users understand their health metrics (BMI, Glucose, BP). Keep responses concise and formatted with markdown."
+        }
+        
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[system_prompt] + messages,
+            temperature=0.7,
+            max_tokens=1024,
+        )
+        
+        return jsonify({
+            "message": response.choices[0].message.content,
+            "status": "success"
+        })
+    except Exception as e:
+        print(f"CHAT ERROR: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 400
 
-@app.route('/recommendations')
-def recommendations():
-    disease = request.args.get('disease', 'diabetes')
-    risk = request.args.get('risk', 'Low')
-    return render_template('recommendations.html', disease=disease, risk=risk)
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({"status": "healthy", "timestamp": time.time()})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

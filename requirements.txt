@@ -4,3 +4,8 @@ numpy==2.4.2
 pandas==3.0.1
 scikit-learn==1.8.0
 gunicorn==22.0.0
+flask-cors
+flask-limiter
+supabase
+python-dotenv
+groq

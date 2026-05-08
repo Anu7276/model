@@ -23,6 +23,7 @@ Thumbs.db
 # Logs and local artifacts
 *.log
 output.log
+.env
 
 # Optional local media/temp
 *.tmp
