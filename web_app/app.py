@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -62,10 +62,11 @@ def get_coach(ex_type):
 DIABETES_MODELS = os.path.join(BASE_DIR, "health ai", "models")
 BP_MODELS = os.path.join(BASE_DIR, "bp_model", "models")
 OBESITY_MODELS = os.path.join(BASE_DIR, "obesity_model", "models")
+FRONTEND_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frontend")
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory(FRONTEND_DIST, 'index.html')
 
 def load_standard_artifacts(directory, model_name):
     model = joblib.load(os.path.join(directory, f"{model_name}.pkl"))
@@ -264,6 +265,17 @@ def chat():
 @app.route('/api/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy", "timestamp": time.time()})
+
+@app.route('/<path:path>')
+def serve_frontend(path):
+    if path.startswith('api/'):
+        return jsonify({"status": "error", "message": "API route not found"}), 404
+
+    asset_path = os.path.join(FRONTEND_DIST, path)
+    if os.path.isfile(asset_path):
+        return send_from_directory(FRONTEND_DIST, path)
+
+    return send_from_directory(FRONTEND_DIST, 'index.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
