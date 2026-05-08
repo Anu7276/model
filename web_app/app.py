@@ -63,12 +63,17 @@ DIABETES_MODELS = os.path.join(BASE_DIR, "health ai", "models")
 BP_MODELS = os.path.join(BASE_DIR, "bp_model", "models")
 OBESITY_MODELS = os.path.join(BASE_DIR, "obesity_model", "models")
 
+@app.route('/')
+def index():
+    return render_template('index.html')
+
 def load_standard_artifacts(directory, model_name):
     model = joblib.load(os.path.join(directory, f"{model_name}.pkl"))
     scaler = joblib.load(os.path.join(directory, "scaler.pkl"))
     feature_cols = joblib.load(os.path.join(directory, "feature_columns.pkl"))
     return model, scaler, feature_cols
 
+@app.route('/predict/diabetes', methods=['POST'])
 @app.route('/api/predict/diabetes', methods=['POST'])
 @limiter.limit(os.getenv('RATELIMIT_PREDICT', "10/minute"))
 def predict_diabetes():
@@ -103,6 +108,7 @@ def predict_diabetes():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
+@app.route('/predict/bp', methods=['POST'])
 @app.route('/api/predict/bp', methods=['POST'])
 @limiter.limit(os.getenv('RATELIMIT_PREDICT', "10/minute"))
 def predict_bp():
@@ -134,6 +140,7 @@ def predict_bp():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
+@app.route('/predict/obesity', methods=['POST'])
 @app.route('/api/predict/obesity', methods=['POST'])
 @limiter.limit(os.getenv('RATELIMIT_PREDICT', "10/minute"))
 def predict_obesity():
@@ -172,6 +179,7 @@ def predict_obesity():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
+@app.route('/process_pose', methods=['POST'])
 @app.route('/api/process_pose', methods=['POST'])
 def process_pose():
     try:
@@ -208,6 +216,21 @@ def process_pose():
         return jsonify(stats)
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/reset_fitness', methods=['POST'])
+@app.route('/api/reset_fitness', methods=['POST'])
+def reset_fitness():
+    sid = get_session_id()
+    to_delete = [key for key in ACTIVE_SESSIONS.keys() if key.startswith(sid) or key.endswith(sid)]
+    for key in to_delete:
+        ACTIVE_SESSIONS.pop(key, None)
+    return jsonify({"status": "success"})
+
+@app.route('/recommendations')
+def recommendations():
+    disease = request.args.get('disease', 'diabetes')
+    risk = request.args.get('risk', 'Low')
+    return render_template('recommendations.html', disease=disease, risk=risk)
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
